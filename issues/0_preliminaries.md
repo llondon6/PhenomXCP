@@ -23,6 +23,8 @@ Action items marked as complete have associated results in the issue notebook.
 
 ## Lessons learned
 
+* **Collocation points** in PhenomX are somewhat more complex than those used in PhenomD. In particular, the location of such points depends explicitly on **fRing**. For now, I will proceed by modifying fRing directly, and then verifying that the modification correctly propagates to the collocation points, and that the end-waveform is sane.
+
 * To get PhenomX to print in debugging mode, one must compile with `PHENOMXHMDEBUG` passed at the config stage via `CFLAGS` : 
 ```bash
 ./configure --prefix=${CONDA_PREFIX} --enable-swig-python\
@@ -33,7 +35,7 @@ Action items marked as complete have associated results in the issue notebook.
             --disable-lalinspiral CFLAGS="-g -D PHENOMXHMDEBUG"
 ```
 
-* **Adding options to LALDict is a faff** as it requires the following convoluted steps which must be followed for every new option one wishes to add:
+* **Adding options to LALDict is a huge faff** as it requires the following convoluted steps which must be followed for every new option one wishes to add:
     1. Open `lalsimulation/lib/LALSimInspiralWaveformParams.c`, and then open `lalsimulation/lib/LALSimInspiralWaveformParams.h`
     2. In `lalsimulation/lib/LALSimInspiralWaveformParams.c` prototype three functions. **For example** if we wish to add a field named `CPFlag`, then the following functions should be added in their respective section within the file (i.e. your new functions should be surrounded by like functions)
         a. `int XLALSimInspiralWaveformParamsInsertPhenomXCPFlag(LALDict *params, INT4 value);`
