@@ -8,7 +8,7 @@
 
 * We wish to first modify the PhenomX infrastructure such that **PhenomXAS** can be modified in the following operative sense: Tuning to NR requires a way of passing modified parameters from python to C. For PhenomDCP this was done entirely in python, but used two "layers": a package containing the python version of PhenomD, and another package containing code for the modeling graft ie PhenomDCP. The later created an abstraction of PhenomD, given some set of modified parameters (deviations away from original parameters). One can think of this as "PhenomDCP-OnTheFly", and a global optimum of these on the fly models was ultimately labeled PhenomDCP. We need to do something similar here, but we will not be able to initiate an abstraction (i.e. class object) in the way that was done for PhenomDCP. Instead, a less efficient but practical route will likely be to create a python wrapper which simply takes in *all* model inputs, including new parameters.
 
-* It seems that the C code does not really treat **PhenomXAS** on par with other PhenomX models; instead, **PhenomXAS is somewhat confusingly often simply referred to as PhenomX** 
+* It seems that the C code does not really treat **PhenomXAS** on par with other PhenomX models; instead, **PhenomXAS is (somewhat confusingly) often simply referred to as PhenomX** 
 
 ## Action items:
 Action items marked as complete have associated results in the issue notebook.
