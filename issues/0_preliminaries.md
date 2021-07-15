@@ -47,7 +47,3 @@ Action items marked as complete have associated results in the issue notebook.
         b. `DEFINE_LOOKUP_FUNC(PhenomXCPFlag, INT4, "CPFlag", 0);`
         c. `DEFINE_ISDEFAULT_FUNC(PhenomXCPFlag, INT4, "CPFlag", 0);`
     **Note** here that the type of the entry is always the second input. 
-
-## PhenomX files and why they are useful 
-
-* *LALSimIMRPhenomX_internals.c* :  
