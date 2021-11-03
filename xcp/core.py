@@ -12,21 +12,304 @@ import json
 package_dir = parent(xcp.__path__[0])
 data_dir = package_dir + 'data/'
 
+# Detect python version
+import sys
+PYTHON3 = True
+if sys.version_info[0] < 3:
+    PYTHON3 = False
+
 # Always load catalog list for calibration runs 
-xcp_catalog_path = data_dir+'xcp_catalog.pickle'
-xcp_catalog = pickle.load( open( xcp_catalog_path, "rb" ) )
-alert('Catalog of calibration runs stored to %s'%magenta('"xcp.xcp_catalog"'),fname='xcp.core')
+calibration_catalog_path = data_dir+'calibration_catalog.pickle'
+if PYTHON3:
+    calibration_catalog = pickle.load( open( calibration_catalog_path, "rb" ), encoding='latin1' )
+else:
+    calibration_catalog = pickle.load( open( calibration_catalog_path, "rb" ) )
+alert('Catalog of calibration runs stored to %s'%magenta('"xcp.calibration_catalog"'),fname='xcp.core')
 
-# Always load curated metadata for calibration runs 
-metadata_dict_path = data_dir+'metadata_dict.pickle'
-metadata_dict = load(metadata_dict_path,allow_pickle=True)
-alert('Metadata dictionary for calibration runs stored to %s'%magenta('"xcp.metadata_dict"'),fname='xcp.core')
-
+# # Always load curated metadata for calibration runs 
+# metadata_dict_path = data_dir+'metadata_dict.pickle'
+# metadata_dict = load(metadata_dict_path,allow_pickle=True)
+# alert('Metadata dictionary for calibration runs stored to %s'%magenta('"xcp.metadata_dict"'),fname='xcp.core')
+        
 #
 catalog_paper_md_path = data_dir+'catalog_paper_metadata.json'
 with open(catalog_paper_md_path, 'r') as f:
     catalog_paper_metadata = json.load(f)
 alert('Metadata dictionary for Ed\'s catalog paper stored to %s'%magenta('"xcp.catalog_paper_metadata"'),fname='xcp.core')
+
+
+#
+def LALPolarizationsFD(approximant, modeList, m1, m2, s1, s2, delta_f, phiRef=0,nu0 = 0,pflag=501, ReturnCoPrec=1):
+    
+    #
+    import lalsimulation as lalsim
+      
+    lalparams = lal.CreateDict()
+    
+    #
+    output_modes = {}
+    
+    #
+    ModeArray = lalsim.SimInspiralCreateModeArray()
+    for mode in modeList:
+        
+        #
+        l,m = mode
+        
+        #
+        lalsim.SimInspiralModeArrayActivateMode(ModeArray, l,m)
+        lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
+
+        #
+        lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(lalparams, 0)
+
+        #
+        lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, ReturnCoPrec)
+        
+        #
+        if pflag:
+            lalsim.SimInspiralWaveformParamsInsertPhenomXPrecVersion( lalparams, pflag )
+
+        #
+        f_min       = 10.0
+        f_max       = 2048.0
+        Omega       = 0.
+        inclination = 0 # Chosen so that it doesn't correxpond to a spherical hamonic root
+        distance_Mpc= 100.0
+        distance    = distance_Mpc*1.0e6*lal.PC_SI
+
+        Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=lal.MSUN_SI*m1,
+                                                m2=lal.MSUN_SI*m2, 
+                                                S1x=s1[0], S1y=s1[1], S1z=s1[2],
+                                                S2x=s2[0], S2y=s2[1], S2z=s2[2],
+                                                distance=distance, 
+                                                inclination=inclination, 
+                                                LALpars=lalparams,
+                                                phiRef=phiRef, 
+                                                f_ref=f_min,
+                                                deltaF=delta_f,
+                                                f_min=f_min,
+                                                f_max=f_max,
+                                                longAscNodes=Omega,
+                                                eccentricity=0.0,
+                                                meanPerAno=0.0,
+                                                approximant=approximant) 
+
+        #
+        freqs = np.arange(len(Hp.data.data)) * delta_f
+        hp = Hp.data.data
+        hc = Hc.data.data
+        
+        if not ( approximant in (lalsim.IMRPhenomXP,lalsim.IMRPhenomXPHM) ):
+
+            #
+            s = -2
+            spherical_harmonic = sYlm(s,l,m,inclination,phiRef)
+            hp /= spherical_harmonic
+            hc /= spherical_harmonic
+        
+        #
+        Mtot = m1+m2
+        hp = codehf(hp,Mtot,distance_Mpc)
+        hc = codehf(hc,Mtot,distance_Mpc)
+        f  = codef(freqs,Mtot) 
+        
+        #
+        output_modes[l,m] = (hp,hc,f)
+    
+    #
+    return output_modes
+
+
+#
+def phenomxhm_multipole( l, m, m1, m2, s1, s2, fmin=0.005, fmax=1.0, df = 5e-5,appx=None):
+    
+    #
+    from numpy import array
+    import numpy as np
+    import lal, lalsimulation as lalsim
+    from positive import physf,codehf,codef,sYlm
+    
+    #
+    lalparams = lal.CreateDict()
+    ModeArray = lalsim.SimInspiralCreateModeArray()
+    
+    #
+    if appx is None:
+        appx = lalsim.IMRPhenomXPHM
+    
+    #
+    lalsim.SimInspiralModeArrayActivateMode(ModeArray, l, m)
+    lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
+    
+    #
+    lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(
+        lalparams, 0)
+        
+    #
+    M_Sol = 100.0
+    distance_Mpc = 100.0
+    
+    #
+    m1_SI       = m1 * M_Sol * lal.MSUN_SI
+    m2_SI       = m2 * M_Sol * lal.MSUN_SI
+    f_min       = physf(fmin,M_Sol)
+    f_max       = physf(fmax,M_Sol)
+    delta_f     = physf(df,M_Sol)
+    Omega       = 0.
+    inclination = 1.3232  # Chosen so that it doesn't correxpond to a spherical harmonic root
+    distance_SI = distance_Mpc*1.0e6*lal.PC_SI
+
+    #
+    Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=m1_SI,
+                                                m2=m2_SI,
+                                                S1x=s1[0], S1y=s1[1], S1z=s1[2],
+                                                S2x=s2[0], S2y=s2[1], S2z=s2[2],
+                                                distance=distance_SI,
+                                                inclination=inclination,
+                                                LALpars=lalparams,
+                                                phiRef=0,
+                                                f_ref=f_min,
+                                                deltaF=delta_f,
+                                                f_min=f_min,
+                                                f_max=f_max,
+                                                longAscNodes=Omega,
+                                                eccentricity=0.0,
+                                                meanPerAno=0.0,
+                                                approximant=appx)
+
+    #
+    freqs = np.arange(len(Hp.data.data)) * delta_f
+
+    #
+    s = -2
+    spherical_harmonic_lm = sYlm(s, l, m, inclination, 0)
+    hp = Hp.data.data / spherical_harmonic_lm
+    hc = Hc.data.data / spherical_harmonic_lm
+
+    #
+    hp = codehf(hp, M_Sol, distance_Mpc)
+    hc = codehf(hc, M_Sol, distance_Mpc)
+    f = codef(freqs, M_Sol)
+
+    #
+    ans = array( [f, hp, hc] ).T
+
+    #    
+    return ans
+
+#
+def phenomxhm_multipoles(approximant, modeList, m1, m2, s1, s2, delta_f, phiRef, nu0=0):
+    '''
+    Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
+    
+    USAGE
+    ---
+    output_modes_dict = phenomxhm_multipoles(approximant, modeList, m1, m2, s1, s2, delta_f, phiRef, nu0=0)
+    
+    NOTES
+    ---
+    IF modeList list of tuples, e.g. [(2,2),(2,1)], 
+    THEN output_modes_dict is dictionary of [freq, hplus, hcross] in code units. 
+    ELSE IF modeList is single list of ell and m, e.g. (2,2) or [2,2], 
+    THEN a single array, i.e. [freq, hplus, hcross], is returned.
+    '''
+    
+    # Import usefuls 
+    from numpy import ndarray 
+    
+    # Validate inputs 
+    # ---
+    
+    # Check type of modeList 
+    if not isinstance(modeList,(list,tuple,ndarray)):
+        error('modeList input must be iterable ')
+    # If a single mode is given, make modeList a list of that mode's indices 
+    single_mode_requested = False
+    if len(modeList)==2:
+        l,m = modeList
+        if isinstance(l,int) and isinstance(m,int):
+            single_mode_requested = True
+            modeList = [ modeList ]
+    # #
+    # for lm in modeList:
+    #     if isinstance(lm,int)
+
+    # Main routine 
+    # ---
+    
+    
+    #
+    lalparams = lal.CreateDict()
+
+    #
+    output_modes = {}
+
+    #
+    ModeArray = lalsim.SimInspiralCreateModeArray()
+    for mode in modeList:
+
+        #
+        l, m = mode
+
+        #
+        lalsim.SimInspiralModeArrayActivateMode(ModeArray, l, m)
+        lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
+
+        #
+        lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(
+            lalparams, threshold)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPFlag(lalparams, 1)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPfRing22Deviation(
+            lalparams, nu0)
+
+        # NOTE that all of the values below ore fiducial -- we ultimately want the waveforms in code units here.
+        f_min = 10.0
+        f_max = 2048.0
+        Omega = 0.
+        inclination = 1.3232  # Chosen so that it doesn't correxpond to a spherical harmonic's root
+        distance_Mpc = 100.0
+        distance = distance_Mpc*1.0e6*lal.PC_SI
+
+        # Tell LAL to generate polarizations for the current mode 
+        Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=lal.MSUN_SI*m1,
+                                                    m2=lal.MSUN_SI*m2,
+                                                    S1x=s1[0], S1y=s1[1], S1z=s1[2],
+                                                    S2x=s2[0], S2y=s2[1], S2z=s2[2],
+                                                    distance=distance,
+                                                    inclination=inclination,
+                                                    LALpars=lalparams,
+                                                    phiRef=phiRef,
+                                                    f_ref=f_min,
+                                                    deltaF=delta_f,
+                                                    f_min=f_min,
+                                                    f_max=f_max,
+                                                    longAscNodes=Omega,
+                                                    eccentricity=0.0,
+                                                    meanPerAno=0.0,
+                                                    approximant=approximant)
+
+        # Create a frequency array
+        freqs = np.arange(len(Hp.data.data)) * delta_f
+
+        # Divide by the relate spherical harmonic function
+        s = -2
+        spherical_harmonic = sYlm(s, l, m, inclination, 0)
+        hp = Hp.data.data / spherical_harmonic
+        hc = Hc.data.data / spherical_harmonic
+
+        # Put in code units
+        Mtot = m1+m2
+        hp = codehf(hp, Mtot, distance_Mpc)
+        hc = codehf(hc, Mtot, distance_Mpc)
+        f = codef(freqs, Mtot)
+
+        # Store to out dictionary 
+        output_modes[l, m] = (hp, hc, f)
+
+    #
+    return output_modes
+
 
 
 # Function to determine version2 data fitting region

@@ -60,7 +60,7 @@ lm_of_interest = [ (2,1), (2,2), (3,2), (3,3), (4,4) ]
 cpframe_select_lm = [ (2,1), (2,2), (2,-1), (2,-2), (2,0) ]
         
 #
-save_keys = ['cp-y-td-sym-z','cp-y-td-sym']
+save_keys = ['cp-y-td-scrubbed-sym-z','cp-y-td-scrubbed-sym']
 
 # Load and process simulations 
 # --
@@ -89,12 +89,17 @@ for a in A:
     frame['cp-y-fd'] = frame['init-j'].__calc_coprecessing_frame__( transform_domain='fd', kind='psi4',select_lm_list=cpframe_select_lm )
     frame['cp-y-td'] = frame['init-j'].__calc_coprecessing_frame__( transform_domain='td', kind='psi4',select_lm_list=cpframe_select_lm )
     
+    #
+    frame['cp-y-td-scrubbed'] = frame['cp-y-td'].scrub(lm=[(2,2),(2,1),(2,-1),(2,-2),(3,3),(3,-3),(4,4),(4,-4)])
+    
     # Symmetrize both
     frame['cp-y-fd-sym'] = frame['cp-y-fd'].__symmetrize__()
     frame['cp-y-td-sym'] = frame['cp-y-td'].__symmetrize__()
+    frame['cp-y-td-scrubbed-sym'] = frame['cp-y-td-scrubbed'].__symmetrize__()
     # --- #
     frame['cp-y-fd-sym-z'] = frame['cp-y-fd'].__symmetrize__(zparity=True,__heuristic__=False)
     frame['cp-y-td-sym-z'] = frame['cp-y-td'].__symmetrize__(zparity=True,__heuristic__=False)
+    frame['cp-y-td-scrubbed-sym-z'] = frame['cp-y-td-scrubbed'].__symmetrize__(zparity=True,__heuristic__=False)
     
     # # -- Do the same using old workflow for comparison -- #
     
@@ -118,7 +123,7 @@ for a in A:
         #
         y0,y1 = -inf,1e4
         kind = 'psi4' # kind used to measure smoothness of phase derivate
-        D0 = mean( frame[save_key][l,m][kind].fd_dphi )
+        D0 = mean( frame[save_keys[0]][l,m][kind].fd_dphi )
         smoothness_measure = {}
         # case_test = lambda k: ('cp' in k) and ( not ('init' in k) )
         case_test = lambda k: ('sym' in k) and ('cp' in k) and ( not ('star' in k) ) # and ('fd' in k)
@@ -210,14 +215,14 @@ for a in A:
                 ylim( y0-b,y1+b )
             #
             xlabel('$fM$')
-            xscale('log')
+            # xscale('log')
             ylabel(r'$\frac{d}{df}\arg(\tilde{\psi}_{%i%i})$'%(l,m))
 
             if is_best:
                 mask = (f>min(xlim())) & (f<max(xlim()))
                 ylim( lim( dphi_for_plotting[mask], dilate=0.1 ) )
 
-            yscale('log')
+            # yscale('log')
             mask = (f>min(xlim())) & (f<max(xlim()))
             ylim( lim( dphi_for_plotting[mask], dilate=1.1, dilate_with_multiply=True ) )
 
@@ -246,7 +251,7 @@ for a in A:
         
         #
         fig,ax = plot_amp_dphi(frame,l,m)
-        file_path = data_dir+'%s_%s_l%im%i.png'%(a.simname,save_key.replace('-','_'),l,m)
+        file_path = data_dir+'%s_l%im%i.png'%(a.simname,l,m)
         alert('Saving diagnostic plot to "%s"'%yellow(file_path))
         savefig( file_path )
         close('all')

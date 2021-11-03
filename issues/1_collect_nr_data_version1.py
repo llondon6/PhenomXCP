@@ -118,7 +118,7 @@ for a in A:
         #
         y0,y1 = -inf,1e4
         kind = 'psi4' # kind used to measure smoothness of phase derivate
-        D0 = mean( frame[save_key][l,m][kind].fd_dphi )
+        D0 = mean( frame[save_keys[0]][l,m][kind].fd_dphi )
         smoothness_measure = {}
         # case_test = lambda k: ('cp' in k) and ( not ('init' in k) )
         case_test = lambda k: ('sym' in k) and ('cp' in k) and ( not ('star' in k) ) # and ('fd' in k)
@@ -210,14 +210,14 @@ for a in A:
                 ylim( y0-b,y1+b )
             #
             xlabel('$fM$')
-            xscale('log')
+            # xscale('log')
             ylabel(r'$\frac{d}{df}\arg(\tilde{\psi}_{%i%i})$'%(l,m))
 
             if is_best:
                 mask = (f>min(xlim())) & (f<max(xlim()))
                 ylim( lim( dphi_for_plotting[mask], dilate=0.1 ) )
 
-            yscale('log')
+            # yscale('log')
             mask = (f>min(xlim())) & (f<max(xlim()))
             ylim( lim( dphi_for_plotting[mask], dilate=1.1, dilate_with_multiply=True ) )
 
@@ -246,7 +246,7 @@ for a in A:
         
         #
         fig,ax = plot_amp_dphi(frame,l,m)
-        file_path = data_dir+'%s_%s_l%im%i.png'%(a.simname,save_key.replace('-','_'),l,m)
+        file_path = data_dir+'%s_l%im%i.png'%(a.simname,l,m)
         alert('Saving diagnostic plot to "%s"'%yellow(file_path))
         savefig( file_path )
         close('all')
