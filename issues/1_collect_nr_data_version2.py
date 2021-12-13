@@ -22,14 +22,13 @@ import h5py
 from os import path
 import pickle
 from xcp import *
-from mpa import gwylmo_cpclean
 
 # Preliminaries 
 # --
 
 # Define path for file IO
 package_dir = parent( xcp.__path__[0] )
-data_dir = package_dir + 'data/version1/'
+data_dir = package_dir + 'data/version2/'
 alert(data_dir)
 mkdir(data_dir,verbose=True)
 
@@ -50,7 +49,7 @@ pickle.dump( A, open( catalog_path, "wb" ) )
 alert('We have found %i simulations.'%len(A))
 
 # Define loading parameters 
-lmax = 2 
+lmax = 4
 pad = 1000
 clean = True
 dt = 0.5
@@ -82,8 +81,8 @@ for a in A:
     # Put in initial J frame
     frame['init-j'] = y_raw.__calc_initial_j_frame__()
     
-    # Symmetrize the psi4 time domain coprecessing frame waveform, and return to the init-j frame
-    frame['star-init-j'] = gwylmo_cpclean( frame['init-j'], cp_domain='td' )
+    # # Symmetrize the psi4 time domain coprecessing frame waveform, and return to the init-j frame
+    # frame['star-init-j'] = gwylmo_cpclean( frame['init-j'], cp_domain='td' )
     
     # NOTE that although the angles model uses the j(t) frame, 
     # we do NOT use this here as the coprecessing frame is uniquely 
@@ -105,13 +104,17 @@ for a in A:
         alert('Calculating coprecessing frame for l=%i subset ...'%ll)
         
         # Select only multipoles with l = ll
-        subframe[ll]    = frame['star-init-j'].selectlm( [(ll,m_) for m_ in range(-ll,ll+1)] )
+        raw_subframe = frame['init-j'].selectlm( [(ll,m_) for m_ in range(-ll,ll+1)] )
+        
+        # ** Go to coprecessing frame, symmetrize, revert back to original frame **
+        subframe[ll] = gwylmo_cpclean( raw_subframe )
         
         # Solve the optimal emission problem and rotatate multipoles
         cp_subframe_fd[ll] =  subframe[ll].__calc_coprecessing_frame__( kind=kind, 
-                                                                     transform_domain='fd' ).__symmetrize__(zparity=True)
-        # cp_subframe_td[ll] =  subframe[ll].__calc_coprecessing_frame__( kind=kind, 
-        #                                                              transform_domain='td' ).__symmetrize__(zparity=True)
+                                                                     transform_domain='fd' )
+        
+        #
+        subframe[ll].scrub(apply=True)
         
         # Store angles for this ll
         foo = cp_subframe_fd[ll].previous_radiation_axis_info
