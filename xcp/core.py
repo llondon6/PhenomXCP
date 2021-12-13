@@ -2,7 +2,7 @@
 
 #
 import pickle
-from positive import alert, magenta, parent
+from positive import alert, magenta, parent, red
 from numpy import loadtxt, load
 from os.path import exists
 import xcp
@@ -26,10 +26,11 @@ else:
     calibration_catalog = pickle.load( open( calibration_catalog_path, "rb" ) )
 alert('Catalog of calibration runs stored to %s'%magenta('"xcp.calibration_catalog"'),fname='xcp.core')
 
-# # Always load curated metadata for calibration runs 
-# metadata_dict_path = data_dir+'metadata_dict.pickle'
-# metadata_dict = load(metadata_dict_path,allow_pickle=True)
-# alert('Metadata dictionary for calibration runs stored to %s'%magenta('"xcp.metadata_dict"'),fname='xcp.core')
+# Always load curated metadata for calibration runs 
+'''NOTE that this files is created by issues/3a_collect_metadata.py'''
+metadata_dict_path = data_dir+'metadata_dict.pickle'
+metadata_dict = load(metadata_dict_path,allow_pickle=True)
+alert('Metadata dictionary for calibration runs stored to %s'%magenta('"xcp.metadata_dict"'),fname='xcp.core')
         
 #
 catalog_paper_md_path = data_dir+'catalog_paper_metadata.json'
@@ -39,7 +40,7 @@ alert('Metadata dictionary for Ed\'s catalog paper stored to %s'%magenta('"xcp.c
 
 
 #
-def LALPolarizationsFD(approximant, modeList, m1, m2, s1, s2, delta_f, phiRef=0,nu0 = 0,pflag=501, ReturnCoPrec=1):
+def LALPolarizationsFD(approximant, lmlist, m1, m2, s1, s2, delta_f, phiRef=0,nu0 = 0,pflag=501, ReturnCoPrec=1):
     
     #
     import lalsimulation as lalsim
@@ -51,7 +52,7 @@ def LALPolarizationsFD(approximant, modeList, m1, m2, s1, s2, delta_f, phiRef=0,
     
     #
     ModeArray = lalsim.SimInspiralCreateModeArray()
-    for mode in modeList:
+    for mode in lmlist:
         
         #
         l,m = mode
@@ -122,118 +123,55 @@ def LALPolarizationsFD(approximant, modeList, m1, m2, s1, s2, delta_f, phiRef=0,
 
 
 #
-def phenomxhm_multipole( l, m, m1, m2, s1, s2, fmin=0.005, fmax=1.0, df = 5e-5,appx=None):
-    
-    #
-    from numpy import array
-    import numpy as np
-    import lal, lalsimulation as lalsim
-    from positive import physf,codehf,codef,sYlm
-    
-    #
-    lalparams = lal.CreateDict()
-    ModeArray = lalsim.SimInspiralCreateModeArray()
-    
-    #
-    if appx is None:
-        appx = lalsim.IMRPhenomXPHM
-    
-    #
-    lalsim.SimInspiralModeArrayActivateMode(ModeArray, l, m)
-    lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
-    
-    #
-    lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(
-        lalparams, 0)
-        
-    #
-    M_Sol = 100.0
-    distance_Mpc = 100.0
-    
-    #
-    m1_SI       = m1 * M_Sol * lal.MSUN_SI
-    m2_SI       = m2 * M_Sol * lal.MSUN_SI
-    f_min       = physf(fmin,M_Sol)
-    f_max       = physf(fmax,M_Sol)
-    delta_f     = physf(df,M_Sol)
-    Omega       = 0.
-    inclination = 1.3232  # Chosen so that it doesn't correxpond to a spherical harmonic root
-    distance_SI = distance_Mpc*1.0e6*lal.PC_SI
-
-    #
-    Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=m1_SI,
-                                                m2=m2_SI,
-                                                S1x=s1[0], S1y=s1[1], S1z=s1[2],
-                                                S2x=s2[0], S2y=s2[1], S2z=s2[2],
-                                                distance=distance_SI,
-                                                inclination=inclination,
-                                                LALpars=lalparams,
-                                                phiRef=0,
-                                                f_ref=f_min,
-                                                deltaF=delta_f,
-                                                f_min=f_min,
-                                                f_max=f_max,
-                                                longAscNodes=Omega,
-                                                eccentricity=0.0,
-                                                meanPerAno=0.0,
-                                                approximant=appx)
-
-    #
-    freqs = np.arange(len(Hp.data.data)) * delta_f
-
-    #
-    s = -2
-    spherical_harmonic_lm = sYlm(s, l, m, inclination, 0)
-    hp = Hp.data.data / spherical_harmonic_lm
-    hc = Hc.data.data / spherical_harmonic_lm
-
-    #
-    hp = codehf(hp, M_Sol, distance_Mpc)
-    hc = codehf(hc, M_Sol, distance_Mpc)
-    f = codef(freqs, M_Sol)
-
-    #
-    ans = array( [f, hp, hc] ).T
-
-    #    
-    return ans
-
-#
-def phenomxhm_multipoles(approximant, modeList, m1, m2, s1, s2, delta_f, phiRef, nu0=0):
+def phenomxhm_multipoles(lmlist, m1, m2, s1, s2, approximant=None, delta_f=1, phiRef=0 , cp=1, nu0=0, pflag=None, chip=None):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
     USAGE
     ---
-    output_modes_dict = phenomxhm_multipoles(approximant, modeList, m1, m2, s1, s2, delta_f, phiRef, nu0=0)
+    output_modes_dict = phenomxhm_multipoles(approximant, lmlist, m1, m2, s1, s2, delta_f, phiRef, nu0=0)
     
     NOTES
     ---
-    IF modeList list of tuples, e.g. [(2,2),(2,1)], 
+    IF lmlist list of tuples, e.g. [(2,2),(2,1)], 
     THEN output_modes_dict is dictionary of [freq, hplus, hcross] in code units. 
-    ELSE IF modeList is single list of ell and m, e.g. (2,2) or [2,2], 
+    ELSE IF lmlist is single list of ell and m, e.g. (2,2) or [2,2], 
     THEN a single array, i.e. [freq, hplus, hcross], is returned.
+    * pflag=500 is the default PhenomXPNR framework
     '''
     
     # Import usefuls 
-    from numpy import ndarray 
+    from numpy import ndarray, array, arange
+    from positive.units import codef,codeh,codehf
+    import lalsimulation as lalsim
+    import lal
     
     # Validate inputs 
     # ---
     
-    # Check type of modeList 
-    if not isinstance(modeList,(list,tuple,ndarray)):
-        error('modeList input must be iterable ')
-    # If a single mode is given, make modeList a list of that mode's indices 
+    # Check type of lmlist 
+    if not isinstance(lmlist,(list,tuple,ndarray)):
+        error('lmlist input must be iterable ')
+    # If a single mode is given, make lmlist a list of that mode's indices 
     single_mode_requested = False
-    if len(modeList)==2:
-        l,m = modeList
+    if len(lmlist)==2:
+        l,m = lmlist
         if isinstance(l,int) and isinstance(m,int):
             single_mode_requested = True
-            modeList = [ modeList ]
-    # #
-    # for lm in modeList:
-    #     if isinstance(lm,int)
+            lmlist = [ lmlist ]
+    #
+    if approximant is None:
+        approximant = lalsim.IMRPhenomXPHM
+    
+    # Get and stor largest value of l for use in setting max frequency
+    lmax = max( [ lm[0] for lm in lmlist ] )
+    fmaxHZ = 2048 * 0.5 * lmax
+    
+    #
+    Mtot = 100.0
+    M1 = m1 * Mtot/ ( m1 + m2 )
+    M2 = m2 * Mtot / ( m1 + m2 )
+
 
     # Main routine 
     # ---
@@ -244,115 +182,174 @@ def phenomxhm_multipoles(approximant, modeList, m1, m2, s1, s2, delta_f, phiRef,
 
     #
     output_modes = {}
-
+    
     #
     ModeArray = lalsim.SimInspiralCreateModeArray()
-    for mode in modeList:
-
+    for lm in lmlist:
+        
         #
-        l, m = mode
-
+        l,m = lm
+        
         #
-        lalsim.SimInspiralModeArrayActivateMode(ModeArray, l, m)
+        lalsim.SimInspiralModeArrayActivateMode(ModeArray, l,m)
         lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
 
         #
-        lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(
-            lalparams, threshold)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPFlag(lalparams, 1)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPfRing22Deviation(
-            lalparams, nu0)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(lalparams, 0)
 
-        # NOTE that all of the values below ore fiducial -- we ultimately want the waveforms in code units here.
-        f_min = 10.0
-        f_max = 2048.0
-        Omega = 0.
-        inclination = 1.3232  # Chosen so that it doesn't correxpond to a spherical harmonic's root
-        distance_Mpc = 100.0
-        distance = distance_Mpc*1.0e6*lal.PC_SI
+        #
+        lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, cp)
+        
+        #
+        if pflag:
+            lalsim.SimInspiralWaveformParamsInsertPhenomXPrecVersion( lalparams, pflag )
 
-        # Tell LAL to generate polarizations for the current mode 
-        Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=lal.MSUN_SI*m1,
-                                                    m2=lal.MSUN_SI*m2,
-                                                    S1x=s1[0], S1y=s1[1], S1z=s1[2],
-                                                    S2x=s2[0], S2y=s2[1], S2z=s2[2],
-                                                    distance=distance,
-                                                    inclination=inclination,
-                                                    LALpars=lalparams,
-                                                    phiRef=phiRef,
-                                                    f_ref=f_min,
-                                                    deltaF=delta_f,
-                                                    f_min=f_min,
-                                                    f_max=f_max,
-                                                    longAscNodes=Omega,
-                                                    eccentricity=0.0,
-                                                    meanPerAno=0.0,
-                                                    approximant=approximant)
+        #
+        f_min       = 10.0
+        f_max       = fmaxHZ
+        Omega       = 0.
+        inclination = 1.3232 # Chosen so that it doesn't correxpond to a spherical hamonic root
+        distance_Mpc= 100.0
+        distance    = distance_Mpc*1.0e6*lal.PC_SI
 
-        # Create a frequency array
-        freqs = np.arange(len(Hp.data.data)) * delta_f
+        Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=lal.MSUN_SI*M1,
+                                                m2=lal.MSUN_SI*M2, 
+                                                S1x=s1[0], S1y=s1[1], S1z=s1[2],
+                                                S2x=s2[0], S2y=s2[1], S2z=s2[2],
+                                                distance=distance, 
+                                                inclination=inclination, 
+                                                LALpars=lalparams,
+                                                phiRef=phiRef, 
+                                                f_ref=f_min,
+                                                deltaF=delta_f,
+                                                f_min=f_min,
+                                                f_max=f_max,
+                                                longAscNodes=Omega,
+                                                eccentricity=0.0,
+                                                meanPerAno=0.0,
+                                                approximant=approximant) 
 
-        # Divide by the relate spherical harmonic function
-        s = -2
-        spherical_harmonic = sYlm(s, l, m, inclination, 0)
-        hp = Hp.data.data / spherical_harmonic
-        hc = Hc.data.data / spherical_harmonic
+        #
+        freqs = arange(len(Hp.data.data)) * delta_f
+        hp = Hp.data.data
+        hc = Hc.data.data
+        
+        #
+        if not ( approximant in (lalsim.IMRPhenomXP,lalsim.IMRPhenomXPHM) ):
 
-        # Put in code units
-        Mtot = m1+m2
-        hp = codehf(hp, Mtot, distance_Mpc)
-        hc = codehf(hc, Mtot, distance_Mpc)
-        f = codef(freqs, Mtot)
-
-        # Store to out dictionary 
-        output_modes[l, m] = (hp, hc, f)
+            #
+            s = -2
+            spherical_harmonic = sYlm(s,l,m,inclination,phiRef)
+            hp /= spherical_harmonic
+            hc /= spherical_harmonic
+        
+        #
+        hp = codehf(hp,Mtot,distance_Mpc)
+        hc = codehf(hc,Mtot,distance_Mpc)
+        f  = codef(freqs,Mtot) 
+        
+        #
+        output_modes[l,m] = hp + 1j * hc
 
     #
-    return output_modes
+    return f, output_modes
 
+# Function to determine version2 data fitting region
+def determine_data_fitting_region_legacy( data, fmin=0.03, fmax=0.12 ):
+    '''
+    Given version2 data array, determine fitting region dynamically.
+    This function assumes clean data within the default or input values of fmin and fmax, and then uses the phase derivate to determine new fmin and fmax values that are ultimately used to define a fitting region.
+    '''
+    
+    # Import usefuls
+    from numpy import argmin,log
+    from positive import smooth,find,lim
+    from matplotlib.pyplot import figure,plot,show,axhline,xlim,ylim
+    
+    # Extract data 
+    f,amp_fd,dphi_fd,alpha,beta,gamma = data
+
+    # Use default domain bounds to determine a mask
+    mask = (f>=fmin) & (f<=fmax)
+    
+    # Determine the minimum dphi
+    # Smooth dphi using postiive's savgol filter
+    y = smooth(dphi_fd[mask]).answer
+    knot = argmin(y)
+    y_knot = y[knot]
+    data[2] = dphi_fd - smooth(dphi_fd[mask]).answer[knot] + y_knot
+    
+    # Determine new fmin and max using heuristic 
+    f_knot = f[mask][knot]
+    new_fmin = max(f_knot * 0.22,0.018) # 0.5 # 0.325
+    new_fmax = f_knot + 0.020 # 0.025 
+    
+    #
+    new_mask = (f>=new_fmin) & (f<=new_fmax)
+    new_data = data.T[new_mask,:]
+    
+    #
+    new_knot = find(f>=fmin)[0]+knot
+    
+    #
+    return new_data,new_knot,new_fmin,new_fmax,f_knot
 
 
 # Function to determine version2 data fitting region
-def determine_data_fitting_region(data, fmin=0.03, fmax=0.12):
+def determine_data_fitting_region(data, threshold=0.015):
     '''
     Given version2 data array, determine fitting region dynamically.
     This function assumes clean data within the default or input values of fmin and fmax, and then uses the phase derivate to determine new fmin and fmax values that are ultimately used to define a fitting region.
     '''
 
     # Import usefuls
-    from numpy import argmin, log
-    from positive import smooth, find, lim
+    from numpy import argmin, log, arange
+    from positive import smooth, find, lim, smoothest_part_by_threshold,findpeaks
     from matplotlib.pyplot import figure, plot, show, axhline, xlim, ylim
 
-    # Extract data
-    f, amp_td, amp_fd, dphi_td, dphi_fd, phi_td, phi_fd = data
-
-    # Use default domain bounds to determine a mask
-    mask = (f >= fmin) & (f <= fmax)
-
-    # Determine the minimum dphi
-    # Smooth dphi using postiive's savgol filter
-    x = log(f[mask])
-    y = smooth(dphi_td[mask]).answer
-    knot = argmin(y)
-    y_knot = y[knot]
-    data[3] = dphi_td - smooth(dphi_td[mask]).answer[knot] + y_knot
-    data[4] = dphi_fd - smooth(dphi_fd[mask]).answer[knot] + y_knot
-
-    # Determine new fmin and max using heuristic
-    f_knot = f[mask][knot]
-    new_fmin = max(f_knot * 0.22, 0.018)  # 0.5 # 0.325
-    new_fmax = f_knot + 0.020  # 0.025
+    # DETERMINE DATA FITTING REGION
+    # ---
+    
+    # 0. Select and unpack
+    f,amp_fd,dphi_fd,alpha,beta,gamma = data
+    
+    # 1. Find smoothest part
+    pre_mask = (f>0) #& (f<0.12)
+    mask_1     = smoothest_part_by_threshold( dphi_fd[pre_mask], threshold=threshold, smooth_width=20, plot=False )
+    dphi_fd_1  = smooth( dphi_fd[pre_mask][mask_1], width=30 ).answer
+    f_1 = f[pre_mask][mask_1]
+    
+    # 2. Handle unstable end behavior and remask
+    peaks,peak_locations = findpeaks( dphi_fd_1 )
+    if len(peak_locations):
+        mask_2    = range(0,peak_locations[-1]+1)
+        dphi_fd_2 = dphi_fd_1[mask_2]
+        f_2 = f_1[mask_2]
+        mask_3 = f_2<0.12
+        dphi_fd_3 = dphi_fd_2[ mask_3 ]
+    else:
+        mask_2 = mask_1
+        dphi_fd_3 = dphi_fd_1
+    
+    # 3. Determine location of the lorentzian min
+    lorentzian_mindex = mask_1[mask_2[argmin( dphi_fd_3 )]]
+    dphi_lorentzian_min = min( dphi_fd_3 )
+    
+    # 4. Use the lorentzian_mindex to define the start and end of the fitting region
+    f_lorentzian_min = f[pre_mask][ lorentzian_mindex ]
+    # f_lorentzian_min = f[mask_1][mask_2][ lorentzian_mindex ]
+    f_min = max(f_lorentzian_min * 0.22, 0.018) 
+    f_max = f_lorentzian_min + 0.012
+    calibration_mask = arange(len(f))[(f>=f_min) & (f<=f_max)]
+    
+    # 5. Select region for output 
+    calibration_data = data.T[ calibration_mask ]
+    # 6. Smooth phase derivative data
+    calibration_data.T[2] = smooth( calibration_data.T[2], width=30 ).answer
+    
 
     #
-    new_mask = (f >= new_fmin) & (f <= new_fmax)
-    new_data = data.T[new_mask, :]
-
-    #
-    new_knot = find(f >= fmin)[0]+knot
-
-    #
-    return new_data, new_knot, new_fmin, new_fmax, f_knot
+    return calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min
 
 
 #
@@ -556,3 +553,82 @@ def advanced_gmvx_plot( fit_object ):
     #
     return summary_fig, eta_set_figs, theta_set_figs
  
+
+# Remove non l=m moments and symmetrize in co-precessing frame
+# QUESTION: Do the angles resulting from this procedure equate to simple averages of the original angles?
+def gwylmo_cpclean( gwylmo, verbose=False, safe_domain_range=None, cp_domain=None, cp_kind=None ):
+
+    '''
+    Given a gwylm object:
+     * put in co-precessing frame
+     * remove higher multipoles
+     * reconstruct mass-quadrupoles by symmetrization
+     * put back in simulation frame
+    '''
+
+    # Import usefuls
+    from numpy import array
+
+    #
+    if cp_domain in (None,'td'):
+        cp_domain = 'td'
+        alert('Using the '+red('Time Domain')+' coprecessing frame for cleaning.')
+    elif cp_domain in ('fd','FD','frequency_domain','freq'):
+        cp_domain = 'fd'
+        alert('Using the '+red('Frequency Domain') +
+              ' coprecessing frame for cleaning.')
+    else:
+        error('Unknown coprecessing domain option:'+str(cp_domain))
+    #
+    if cp_kind is None:
+        cp_kind = 'psi4'
+
+    #
+    if safe_domain_range is None:
+        safe_domain_range=[0.009,0.3]
+
+    #
+    if verbose:
+        alert('Now removing current-quadrupole content in coprecessing frame, symmetrizing mass-quadrupoles and then putting back in original frame.')
+
+    #
+    y = gwylmo
+
+    # Put in frame where j init is zhat
+    y0 = y.__calc_initial_j_frame__()
+
+    # Calc coprecessing frame wf TD
+    y1 = y0.__calc_coprecessing_frame__(verbose=True, safe_domain_range=safe_domain_range,transform_domain=cp_domain,kind=cp_kind)
+
+    # Duplicate for manipulation
+    y2 = y1.copy()
+
+    # Symmetrize
+    ll,mm = y.root_lm
+    for kind in y2[ll,mm]:
+        yy = 0.5 * (  y2[ll,mm][kind].y + ((-1)**ll)*y2[ll,-mm][kind].y.conj()  )
+        wfarr22 = array( [ y2.t, yy.real, yy.imag ] ).T
+        wfarr2m2 = array( [ y2.t, yy.real,-yy.imag ] ).T
+        y2[ll,mm][kind].setfields(wfarr22)
+        y2[ll,-mm][kind].setfields(wfarr2m2)
+
+    # Remove higher multipole data
+    for lm in y2.lm:
+        l,m = lm
+        if (l,abs(m)) != (ll,mm):
+            for kind in y2.lm[lm]:
+                wfarr = y2[lm][kind].wfarr
+                wfarr[:,1:] *= 1e-10
+                y2[lm][kind].setfields( wfarr )
+
+    # Re-wrap with the original TD or FD angles
+    alpha  = y1.radiation_axis_info.radiation_axis['%s_alpha'%cp_domain]
+    beta   = y1.radiation_axis_info.radiation_axis['%s_beta' %cp_domain]
+    gamma  = y1.radiation_axis_info.radiation_axis['%s_gamma'%cp_domain]
+    angles = ( alpha,beta,gamma )
+    y3     = y2.__rotate_frame_at_all_times__( angles, transform_domain=cp_domain )
+    y3.frame = y.frame
+
+    # Return answer
+    ans = y3
+    return ans

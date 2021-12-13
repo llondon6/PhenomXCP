@@ -62,7 +62,7 @@ for k in range(len(data)):
     
     # DETERMINE DATA FITTING REGION
     # ---
-    calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( data[k], threshold=0.015 )
+    calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( data[k] )
     
     #
     calibration_f, calibration_amp_fd, calibration_dphi_fd, calibration_alpha, calibration_beta, calibration_gamma = calibration_data.T

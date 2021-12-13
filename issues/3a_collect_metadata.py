@@ -41,7 +41,8 @@ for f in files:
     
     #
     l = a.L/norm(a.L)
-    if ('q1a' in file_name) and (norm(a.X1)<norm(a.X2)):
+    test_print = ('q1a' in file_name) and (norm(a.X1)<norm(a.X2))
+    if test_print:
         warning(magenta('Flipping 1-2 labels in euqal mass case'),fname=file_name)
         a.X1,a.X2 = [ array(k) for k in (a.X2,a.X1) ]
         a.m1,a.m2 = [ float(k) for k in (a.m2,a.m1) ]
@@ -62,6 +63,19 @@ for f in files:
     #
     l = L/norm(L)
     s = S/norm(S)
+    
+    # Determin angles to rotate spins into frame where L || z
+    # ---
+    lx,ly,lz = l
+    alpha = 0
+    beta  = -arccos( lz )
+    gamma = -arctan2( ly, lx )
+    chi1_vec = rotate3( a.X1, alpha, beta, gamma )
+    chi2_vec = rotate3( a.X2, alpha, beta, gamma )
+    if test_print:
+        print( '\t * chi1_vec = ',chi1_vec)
+        print( '\t * chi2_vec = ',chi2_vec)
+    
     
     # NOTE that theta is in radians
     theta = arccos( dot( l, s ) ) 
@@ -89,7 +103,9 @@ for f in files:
                        chi1,
                        chi2,
                        a1,
-                       a2 ] )
+                       a2,
+                       chi1_vec,
+                       chi2_vec ] )
 
 #
 print( 'Done.')
@@ -98,7 +114,7 @@ print( 'Done.')
 metadata_array = array(metadata)
 
 #
-keys = [ 'theta', 'm1', 'm2', 'eta', 'delta', 'chi_eff', 'chi_p', 'chi1', 'chi2' ]
+keys = [ 'theta', 'm1', 'm2', 'eta', 'delta', 'chi_eff', 'chi_p', 'chi1', 'chi2', 'a1', 'a2', 'chi1_vec', 'chi2_vec' ]
 
 #
 metadata_dict = {}
