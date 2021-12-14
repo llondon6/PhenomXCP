@@ -123,7 +123,7 @@ def LALPolarizationsFD(approximant, lmlist, m1, m2, s1, s2, delta_f, phiRef=0,nu
 
 
 #
-def phenomxhm_multipoles(lmlist, m1, m2, s1, s2, approximant=None, delta_f=1, phiRef=0 , cp=1, nu0=0, pflag=None, chip=None):
+def get_phenomxhm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, nu0=0, pflag=None, chip=None):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -142,9 +142,12 @@ def phenomxhm_multipoles(lmlist, m1, m2, s1, s2, approximant=None, delta_f=1, ph
     
     # Import usefuls 
     from numpy import ndarray, array, arange
-    from positive.units import codef,codeh,codehf
+    from positive.units import codef,codeh,codehf,physf
+    from positive import sYlm
     import lalsimulation as lalsim
     import lal
+    
+    #
     
     # Validate inputs 
     # ---
@@ -159,19 +162,15 @@ def phenomxhm_multipoles(lmlist, m1, m2, s1, s2, approximant=None, delta_f=1, ph
         if isinstance(l,int) and isinstance(m,int):
             single_mode_requested = True
             lmlist = [ lmlist ]
-    #
-    if approximant is None:
-        approximant = lalsim.IMRPhenomXPHM
-    
-    # Get and stor largest value of l for use in setting max frequency
-    lmax = max( [ lm[0] for lm in lmlist ] )
-    fmaxHZ = 2048 * 0.5 * lmax
     
     #
     Mtot = 100.0
     M1 = m1 * Mtot/ ( m1 + m2 )
     M2 = m2 * Mtot / ( m1 + m2 )
-
+    
+    # Create physical frequencies as a LAL REAL* sequence
+    freqs_Hz = lal.CreateREAL8Sequence( len(freqs) )
+    freqs_Hz.data = physf(freqs,Mtot)
 
     # Main routine 
     # ---
@@ -197,8 +196,8 @@ def phenomxhm_multipoles(lmlist, m1, m2, s1, s2, approximant=None, delta_f=1, ph
         #
         lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(lalparams, 0)
 
-        #
-        lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, cp)
+        # Tell the model to return the coprecessing mode -- only works on our development branches
+        lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, 1)
         
         #
         if pflag:
@@ -206,53 +205,79 @@ def phenomxhm_multipoles(lmlist, m1, m2, s1, s2, approximant=None, delta_f=1, ph
 
         #
         f_min       = 10.0
-        f_max       = fmaxHZ
+        # f_max       = fmaxHZ
         Omega       = 0.
-        inclination = 1.3232 # Chosen so that it doesn't correxpond to a spherical hamonic root
+        inclination = 1.3232 # Chosen so that it doesn't correxpond to a spherical hamonic root # NOTE that the inclination does not matter here as the 
         distance_Mpc= 100.0
         distance    = distance_Mpc*1.0e6*lal.PC_SI
 
-        Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=lal.MSUN_SI*M1,
-                                                m2=lal.MSUN_SI*M2, 
-                                                S1x=s1[0], S1y=s1[1], S1z=s1[2],
-                                                S2x=s2[0], S2y=s2[1], S2z=s2[2],
-                                                distance=distance, 
-                                                inclination=inclination, 
-                                                LALpars=lalparams,
-                                                phiRef=phiRef, 
-                                                f_ref=f_min,
-                                                deltaF=delta_f,
-                                                f_min=f_min,
-                                                f_max=f_max,
-                                                longAscNodes=Omega,
-                                                eccentricity=0.0,
-                                                meanPerAno=0.0,
-                                                approximant=approximant) 
+        #
+        m1_SI = lal.MSUN_SI*M1
+        m2_SI = lal.MSUN_SI*M2
+        chi1x, chi1y, chi1z = s1
+        chi2x, chi2y, chi2z = s2
+        distance_SI = distance
+        fRef_In = f_min
+        
+        #
+        Hp, Hc = lalsim.SimIMRPhenomXPHMFrequencySequence( freqs_Hz, m1_SI, m2_SI, chi1x, chi1y, chi1z, chi2x, chi2y, chi2z, distance_SI, inclination, phiRef, fRef_In, lalparams)
+            
+
+        # Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=lal.MSUN_SI*M1,
+        #                                         m2=lal.MSUN_SI*M2, 
+        #                                         S1x=s1[0], S1y=s1[1], S1z=s1[2],
+        #                                         S2x=s2[0], S2y=s2[1], S2z=s2[2],
+        #                                         distance=distance, 
+        #                                         inclination=inclination, 
+        #                                         LALpars=lalparams,
+        #                                         phiRef=phiRef, 
+        #                                         f_ref=f_min,
+        #                                         deltaF=delta_f,
+        #                                         f_min=f_min,
+        #                                         f_max=f_max,
+        #                                         longAscNodes=Omega,
+        #                                         eccentricity=0.0,
+        #                                         meanPerAno=0.0,
+        #                                         approximant=approximant) 
 
         #
-        freqs = arange(len(Hp.data.data)) * delta_f
         hp = Hp.data.data
         hc = Hc.data.data
         
         #
-        if not ( approximant in (lalsim.IMRPhenomXP,lalsim.IMRPhenomXPHM) ):
+        # if True:#not ( approximant in (lalsim.IMRPhenomXP,lalsim.IMRPhenomXPHM) ):
+        # if not ( approximant in (lalsim.IMRPhenomXP,lalsim.IMRPhenomXPHM) ):
 
-            #
-            s = -2
-            spherical_harmonic = sYlm(s,l,m,inclination,phiRef)
-            hp /= spherical_harmonic
-            hc /= spherical_harmonic
+        #     #
+        #     s = -2
+        #     spherical_harmonic = sYlm(s,l,m,inclination,phiRef)
+        #     hp /= spherical_harmonic
+        #     hc /= spherical_harmonic
         
         #
         hp = codehf(hp,Mtot,distance_Mpc)
         hc = codehf(hc,Mtot,distance_Mpc)
-        f  = codef(freqs,Mtot) 
         
         #
         output_modes[l,m] = hp + 1j * hc
 
     #
-    return f, output_modes
+    return output_modes
+
+
+#
+def template_amp_phase(m1, m2, chi1_vec, chi2_vec, chi_p, lmlist=None):
+    
+    #
+    if lmlist is None:
+        lmlist = [ (2,2) ]
+    
+    #
+    def template_amp( f, mu2=0, mu4=0 ):
+        
+        #
+        freqs,mod_phenomd_dict = xcp.get_phenomxhm_multipoles( lmlist, m1, m2, chi1_vec, chi2_vec, mu2=mu2, mu4=mu4 )
+
 
 # Function to determine version2 data fitting region
 def determine_data_fitting_region_legacy( data, fmin=0.03, fmax=0.12 ):
