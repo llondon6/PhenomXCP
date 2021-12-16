@@ -10,5 +10,5 @@ alert(yellow('Warm greetings from XCP')+'.',fname='init')
 # Import local dependencies
 from . import core
 from . core import *
-from . import plotting
-from . plotting import *
+from . import io
+from . io import *

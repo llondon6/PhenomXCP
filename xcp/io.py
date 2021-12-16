@@ -213,3 +213,86 @@ def collect_nr_data_plotting_helper( ll, gwylmo, euler_alpha_beta_gamma ):
     
     #
     return fig, ax, output_data, format_tags
+
+#
+def collect_nr_data_helper_v3( ll, gwylmo_fd, gwylmo_td, euler_alpha_beta_gamma_fd, euler_alpha_beta_gamma_td ):
+    
+    '''
+    '''
+    
+    #
+    from numpy import unwrap,pi,mean,array
+
+    #
+    domain = gwylmo_fd.f
+    
+    #
+    output_data = []
+    format_tags = []
+    
+    # * 0
+    output_data.append(domain)
+    format_tags.append('f')
+    
+    # Amplitudes
+    # ---
+    
+    # * 1
+    codomain = gwylmo_fd[ll,ll]['strain'].fd_amp
+    output_data.append(codomain)
+    format_tags.append('fd_amp')
+    
+    # * 2
+    codomain = gwylmo_td[ll,ll]['strain'].fd_amp
+    output_data.append(codomain)
+    format_tags.append('td_amp')
+    
+    # Strain phases
+    # ---
+    
+    # * 3
+    codomain = gwylmo_fd[ll,ll]['strain'].fd_phi
+    output_data.append(codomain)
+    format_tags.append('strain_fd_phase')
+    
+    # * 4
+    codomain = gwylmo_td[ll,ll]['strain'].fd_phi
+    output_data.append(codomain)
+    format_tags.append('strain_td_phase')
+    
+    # Psi4 phases
+    # ---
+    
+    # * 5
+    codomain = gwylmo_fd[ll,ll]['psi4'].fd_phi
+    output_data.append(codomain)
+    format_tags.append('psi4_fd_phase')
+    
+    # * 6
+    codomain = gwylmo_td[ll,ll]['psi4'].fd_phi
+    output_data.append(codomain)
+    format_tags.append('psi4_td_phase')
+    
+    # FD Angles
+    # ---
+    
+    # * 7
+    codomain = -euler_alpha_beta_gamma_fd[0]
+    output_data.append(codomain)
+    format_tags.append('fd_alpha')
+    
+    # * 8
+    codomain = euler_alpha_beta_gamma_fd[1]
+    output_data.append(codomain)
+    format_tags.append('fd_beta')
+    
+    # * 9
+    codomain = euler_alpha_beta_gamma_fd[2]
+    output_data.append(codomain)
+    format_tags.append('fd_gamma')
+    
+    #
+    output_data = array(output_data).T
+    
+    #
+    return output_data, format_tags

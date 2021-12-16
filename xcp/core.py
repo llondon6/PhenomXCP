@@ -123,7 +123,7 @@ def LALPolarizationsFD(approximant, lmlist, m1, m2, s1, s2, delta_f, phiRef=0,nu
 
 
 #
-def get_phenomxhm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, nu0=0, pflag=None, chip=None):
+def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=500, mu2=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta2=0 ):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -141,7 +141,7 @@ def get_phenomxhm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=
     '''
     
     # Import usefuls 
-    from numpy import ndarray, array, arange
+    from numpy import ndarray, array, arange, double
     from positive.units import codef,codeh,codehf,physf
     from positive import sYlm
     import lalsimulation as lalsim
@@ -193,66 +193,42 @@ def get_phenomxhm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=
         lalsim.SimInspiralModeArrayActivateMode(ModeArray, l,m)
         lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
 
-        #
+        # Turn off multibanding
         lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(lalparams, 0)
 
         # Tell the model to return the coprecessing mode -- only works on our development branches
         lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, 1)
         
         #
+        
+        # Set deviations from base model based on inputs
+        mu2,mu4,nu4,nu5,nu6,zeta2 = [ double(k) for k in (mu2,mu4,nu4,nu5,nu6,zeta2) ]
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2(lalparams, mu2)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU4(lalparams, mu4)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU4(lalparams, nu4)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU5(lalparams, nu5)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU6(lalparams, nu6)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA2(lalparams, zeta2)
+        
+        #
         if pflag:
             lalsim.SimInspiralWaveformParamsInsertPhenomXPrecVersion( lalparams, pflag )
 
         #
-        f_min       = 10.0
-        # f_max       = fmaxHZ
-        Omega       = 0.
-        inclination = 1.3232 # Chosen so that it doesn't correxpond to a spherical hamonic root # NOTE that the inclination does not matter here as the 
         distance_Mpc= 100.0
-        distance    = distance_Mpc*1.0e6*lal.PC_SI
-
-        #
+        distance_SI    = distance_Mpc*1.0e6*lal.PC_SI
         m1_SI = lal.MSUN_SI*M1
         m2_SI = lal.MSUN_SI*M2
         chi1x, chi1y, chi1z = s1
         chi2x, chi2y, chi2z = s2
-        distance_SI = distance
-        fRef_In = f_min
+        fRef_In = 0
         
         #
-        Hp, Hc = lalsim.SimIMRPhenomXPHMFrequencySequence( freqs_Hz, m1_SI, m2_SI, chi1x, chi1y, chi1z, chi2x, chi2y, chi2z, distance_SI, inclination, phiRef, fRef_In, lalparams)
-            
-
-        # Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=lal.MSUN_SI*M1,
-        #                                         m2=lal.MSUN_SI*M2, 
-        #                                         S1x=s1[0], S1y=s1[1], S1z=s1[2],
-        #                                         S2x=s2[0], S2y=s2[1], S2z=s2[2],
-        #                                         distance=distance, 
-        #                                         inclination=inclination, 
-        #                                         LALpars=lalparams,
-        #                                         phiRef=phiRef, 
-        #                                         f_ref=f_min,
-        #                                         deltaF=delta_f,
-        #                                         f_min=f_min,
-        #                                         f_max=f_max,
-        #                                         longAscNodes=Omega,
-        #                                         eccentricity=0.0,
-        #                                         meanPerAno=0.0,
-        #                                         approximant=approximant) 
+        Hp, Hc = lalsim.SimIMRPhenomXPHMFrequencySequence( freqs_Hz, m1_SI, m2_SI, chi1x, chi1y, chi1z, chi2x, chi2y, chi2z, distance_SI, 0, phiRef, fRef_In, lalparams)
 
         #
         hp = Hp.data.data
         hc = Hc.data.data
-        
-        #
-        # if True:#not ( approximant in (lalsim.IMRPhenomXP,lalsim.IMRPhenomXPHM) ):
-        # if not ( approximant in (lalsim.IMRPhenomXP,lalsim.IMRPhenomXPHM) ):
-
-        #     #
-        #     s = -2
-        #     spherical_harmonic = sYlm(s,l,m,inclination,phiRef)
-        #     hp /= spherical_harmonic
-        #     hc /= spherical_harmonic
         
         #
         hp = codehf(hp,Mtot,distance_Mpc)
@@ -266,17 +242,120 @@ def get_phenomxhm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=
 
 
 #
-def template_amp_phase(m1, m2, chi1_vec, chi2_vec, chi_p, lmlist=None):
+def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
+    
+    # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
     
     #
-    if lmlist is None:
-        lmlist = [ (2,2) ]
+    import xcp
+    from numpy import unwrap,angle 
+    from positive import spline_diff
     
     #
-    def template_amp( f, mu2=0, mu4=0 ):
+    lmlist = [ (ell,ell) ]
+    
+    #
+    def template_together( f, mu2=mu2, nu5=nu5, nu6=nu6 ):
+        
+        # Set phase deviations to zero
+        mu4=0 # No longer to be used as it is completely degenerate with nu5 in PhenomX
+        nu4=0
+        zeta2=0
+        
+        # Calculate PhenomXPHM with the input amplitude deviations
+        # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
+        multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
+        
+        # 
+        complex_strain = multipole_dict[ell,ell]
+            
+        # Given the complex FD waveform, compute its amplitude
+        amplitude = abs(complex_strain)
+        # Given the complex FD waveform, compute its phase derivative
+        complex_strain = multipole_dict[ell,ell]
+        phase = unwrap( angle(complex_strain) )
+        phase_derivative = spline_diff(f,phase)
+        # Find min phase derivative
+        mask = (f>0.03)&(f<0.12)
+        index_min_phase_derivative = list(range(length(f)))[mask][ argmin( phase_derivative[ mask ] ) ]
+        min_phase_derivative = phase_derivative[ index_min_phase_derivative ]
+        # Adjust phase so that phase and phase derivative are zero at index_min_phase_derivative
+        phase -= min_phase_derivative * f
+        phase -= phase[ index_min_phase_derivative ]
         
         #
-        freqs,mod_phenomd_dict = xcp.get_phenomxhm_multipoles( lmlist, m1, m2, chi1_vec, chi2_vec, mu2=mu2, mu4=mu4 )
+        return amplitude * exp( 1j * phase )
+    
+    #
+    def template_amp( f, mu2=0, nu5=0 ):
+        
+        # Set phase deviations to zero
+        # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
+        nu4=0
+        nu6=0
+        zeta2=0
+        
+        # Calculate PhenomXPHM with the input amplitude deviations
+        # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
+        multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
+        
+        # Given the complex FD waveform, compute its amplitude
+        complex_strain = multipole_dict[ell,ell]
+        amplitude = abs(complex_strain)
+        
+        #
+        return amplitude
+        
+    # #
+    # def template_dphi( f, nu4=0, nu5=0, nu6=0, zeta2=0 ):
+        
+    #     # Set amplitude deviations to zero
+    #     mu2=0
+    #     mu4=0
+        
+    #     # Calculate PhenomXPHM with the input phase deviations
+    #     # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
+    #     multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
+        
+    #     # Given the complex FD waveform, compute its amplitude
+    #     complex_strain = multipole_dict[ell,ell]
+    #     phase = unwrap( angle(complex_strain) )
+    #     phase_derivative = spline_diff(f,phase)
+    #     # Shift such that the min is zero
+    #     phase_derivative -= min( phase_derivative[ (f>0.03)&(f<0.12) ] )
+        
+    #     #
+    #     return phase_derivative
+        
+    #
+    def make_template_dphi( mu2=0, nu5=0 ):
+        
+        #
+        def template_dphi( f, nu6=0, nu4=0, zeta2=0 ):
+            
+            # Set amplitude deviations to zero
+            mu4=0
+            
+            # Calculate PhenomXPHM with the input phase deviations
+            # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
+            
+            # Given the complex FD waveform, compute its amplitude
+            complex_strain = multipole_dict[ell,ell]
+            phase = unwrap( angle(complex_strain) )
+            phase_derivative = spline_diff(f,phase)
+            # Shift such that the min is zero
+            phase_derivative -= min( phase_derivative[ (f>0.03)&(f<0.12) ] )
+            
+            #
+            return phase_derivative
+            
+        #
+        return template_dphi
+        
+        
+    #
+    return template_amp, make_template_dphi
 
 
 # Function to determine version2 data fitting region
@@ -369,8 +448,10 @@ def determine_data_fitting_region(data, threshold=0.015):
     
     # 5. Select region for output 
     calibration_data = data.T[ calibration_mask ]
-    # 6. Smooth phase derivative data
-    calibration_data.T[2] = smooth( calibration_data.T[2], width=30 ).answer
+    # 6. Smooth phase derivative data and subtract min
+    calibration_data.T[2] = dphi_fd[calibration_mask] - dphi_lorentzian_min
+    # calibration_data.T[2] = smooth( dphi_fd, width=30 ).answer[calibration_mask] - dphi_lorentzian_min
+    # calibration_data.T[2] = smooth( calibration_data.T[2], width=30 ).answer
     
 
     #
