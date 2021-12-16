@@ -8,7 +8,7 @@ from positive import *
 from nrutils import scsearch, gwylm
 from glob import glob
 import xcp
-from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict
+from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict,template_amp_phase
 
 # Let the user know where lalsimulation lives
 
@@ -57,72 +57,67 @@ lmlist = [ (ll,ll) ]
 #
 p = 0
 for f_ in files[::-1]:
+
+    #
+    simname = f_.split('/')[-1].split('_l%im%i.'%(ll,ll))[0]
+
+    # Find index location of metadata for simname 
+    k = [ k for k,val in enumerate(metadata_dict['simname']) if val in simname ][0]
+
+    # Load data for this case
+    raw_data = loadtxt(f_).T
+    calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data )
+
+    # Collect params for this case 
+    metadata = metadata_dict['array_data'][k,:]
+
+    #
+    f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
+    theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_vec,chi2_vec = metadata_dict['array_data'][k]
+    #dphi_fd -= min( dphi_fd[ (f>0.03)&(f<0.12) ] )
     
-    if True:#'q8a08t150' in f_:#'q8a08t30' in f_:
+    #
+    template_amp, template_dphi = template_amp_phase(m1, m2, chi1_vec, chi2_vec,ell=2)
+    mod_xhm0_amp  = template_amp(f)
+    mod_xhm0_dphi = template_dphi(f)
+    
+    #
+    mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec )
+    mod_xhm = mod_xhm_dict[ll,ll]
+    mod_xhm_amp = abs(mod_xhm)
+    mod_xhm_phi = unwrap( angle(mod_xhm) )
+    mod_xhm_dphi = spline_diff(f,mod_xhm_phi)
+    mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03)&(f<0.12) ] )
 
-        #
-        simname = f_.split('/')[-1].split('_l%im%i.'%(ll,ll))[0]
+    # PLOTTING
+    # ---
 
-        # Find index location of metadata for simname 
-        k = [ k for k,val in enumerate(metadata_dict['simname']) if val in simname ][0]
+    #
+    sca(ax[p]); p+=1
+    plot( f, dphi_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
+    plot( f, mod_xhm_dphi, label='PhenomX(500)', ls='--',lw=2,alpha=0.85,color='r' )
+    plot( f, mod_xhm0_dphi, label='PhenomX(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+    xscale('log')
+    xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
+    ylim( limy(f, mod_xhm_dphi,dilate=0.1) )
+    title(simname,size=12,loc='left')
+    legend(ncol=2,loc=1)
+    ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{22})$')
+    xlabel('$fM$')
+    title(simname,loc='left',size=12)
 
-        # Load data for this case
-        raw_data = loadtxt(f_).T
-        calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data )
-
-        # Collect params for this case 
-        metadata = metadata_dict['array_data'][k,:]
-
-        #
-        f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
-        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_vec,chi2_vec = metadata_dict['array_data'][k]
-        #dphi_fd -= min( dphi_fd[ (f>0.03)&(f<0.12) ] )
-        
-        #
-        mod_xhm0_dict = xcp.get_phenomxhm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0 )
-        mod_xhm0 = mod_xhm0_dict[ll,ll]
-        mod_xhm0_amp = abs(mod_xhm0)
-        mod_xhm0_phi = unwrap( angle(mod_xhm0) )
-        mod_xhm0_dphi = spline_diff(f,mod_xhm0_phi)
-        mod_xhm0_dphi -= min( mod_xhm0_dphi[ (f>0.03)&(f<0.12) ] )
-        
-        #
-        mod_xhm_dict = xcp.get_phenomxhm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec )
-        mod_xhm = mod_xhm_dict[ll,ll]
-        mod_xhm_amp = abs(mod_xhm)
-        mod_xhm_phi = unwrap( angle(mod_xhm) )
-        mod_xhm_dphi = spline_diff(f,mod_xhm_phi)
-        mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03)&(f<0.12) ] )
-
-        # PLOTTING
-        # ---
-
-        #
-        sca(ax[p]); p+=1
-        plot( f, dphi_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
-        plot( f, mod_xhm_dphi, label='PhenomX(500)', ls='--',lw=2,alpha=0.85,color='r' )
-        plot( f, mod_xhm0_dphi, label='PhenomX(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
-        xscale('log')
-        xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
-        ylim( limy(f, mod_xhm_dphi,dilate=0.1) )
-        title(simname,size=12,loc='left')
-        legend(ncol=2,loc=1)
-        ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{22})$')
-        xlabel('$fM$')
-        title(simname,loc='left',size=12)
-
-        sca(ax[p]); p+=1
-        plot( f, amp_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
-        plot( f, mod_xhm_amp, label='PhenomX(500)', ls='--',lw=2,alpha=0.85,color='r' )
-        plot( f, mod_xhm0_amp, label='PhenomX(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
-        yscale('log')
-        xscale('log')
-        legend(ncol=2)
-        ylim( limy(f, amp_fd,dilate=5) )
-        xlabel('$fM$')
-        ylabel(r'$|\tilde{h}_{22}(f)|$')
-        #
-        title(simname,loc='left',size=12)
+    sca(ax[p]); p+=1
+    plot( f, amp_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
+    plot( f, mod_xhm_amp, label='PhenomX(500)', ls='--',lw=2,alpha=0.85,color='r' )
+    plot( f, mod_xhm0_amp, label='PhenomX(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+    yscale('log')
+    xscale('log')
+    legend(ncol=2)
+    ylim( limy(f, amp_fd,dilate=5) )
+    xlabel('$fM$')
+    ylabel(r'$|\tilde{h}_{22}(f)|$')
+    #
+    title(simname,loc='left',size=12)
         
         
 #

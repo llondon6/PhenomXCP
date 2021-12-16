@@ -50,10 +50,10 @@ alert('We have found %i simulations.'%len(A))
 
 # Define loading parameters 
 lmax = 4
-pad = 1000
+pad = 2000
 clean = True
 dt = 0.5
-kind = 'psi4'
+kind = 'psi4' # Data kind for calculating coprecessing frame
 
 # Load and process simulations 
 # --
@@ -92,9 +92,9 @@ for a in A:
     # Solve optimal emission problem for l subsets
     subframe       = {}
     cp_subframe_fd = {}
-    # cp_subframe_td = {}
+    cp_subframe_td = {}
     subangles      = {}
-    # subangles_td   = {}
+    subangles_td   = {}
     for ll in range(2,lmax+1):
         
         #
@@ -122,21 +122,15 @@ for a in A:
         foo = cp_subframe_fd[ll].previous_radiation_axis_info
         subangles[ll] = [ foo.radiation_axis[k] for k in ('fd_alpha','fd_beta','fd_gamma') ]
         bar = cp_subframe_td[ll].previous_radiation_axis_info
-        subangles_td[ll] = [ foo.radiation_axis[k] for k in ('td_alpha','td_beta','td_gamma') ]
+        subangles_td[ll] = [ bar.radiation_axis[k] for k in ('td_alpha','td_beta','td_gamma') ]
         
         # **
-        alert('Saving diagnostic plot for l=m=%i ...'%ll)
-        fig, ax, output_data, format_tags = collect_nr_data_plotting_helper( ll, cp_subframe_fd[ll], subangles[ll] )
-        #
-        png_file_path = data_dir+'%s_l%im%i.png'%(cp_subframe_fd[ll].simname,ll,mm)
-        savefig( png_file_path, pad_inches=0 )
-        alert('Diagnostic plot saved to "%s"'%yellow(png_file_path))
-        close('all')
+        output_data, format_tags = collect_nr_data_helper_v3( ll, cp_subframe_fd[ll], cp_subframe_td[ll], subangles[ll], subangles_td[ll] )
         
         #
         txt_file_path = data_dir+'%s_l%im%i.txt'%(cp_subframe_fd[ll].simname,ll,mm)
         header = ',        '.join(format_tags)
-        alert('Saving related data to "%s"'%yellow(txt_file_path))
+        alert('Saving data to "%s"'%yellow(txt_file_path))
         savetxt( txt_file_path, output_data, header=header )
 
 

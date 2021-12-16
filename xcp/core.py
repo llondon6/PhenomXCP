@@ -255,11 +255,10 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
     lmlist = [ (ell,ell) ]
     
     #
-    def template_together( f, mu2=mu2, nu5=nu5, nu6=nu6 ):
+    def template_together( f, mu2=0, nu4=0, nu5=0, nu6=0 ):
         
         # Set phase deviations to zero
         mu4=0 # No longer to be used as it is completely degenerate with nu5 in PhenomX
-        nu4=0
         zeta2=0
         
         # Calculate PhenomXPHM with the input amplitude deviations
@@ -277,34 +276,32 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
         phase_derivative = spline_diff(f,phase)
         # Find min phase derivative
         mask = (f>0.03)&(f<0.12)
-        index_min_phase_derivative = list(range(length(f)))[mask][ argmin( phase_derivative[ mask ] ) ]
-        min_phase_derivative = phase_derivative[ index_min_phase_derivative ]
-        # Adjust phase so that phase and phase derivative are zero at index_min_phase_derivative
-        phase -= min_phase_derivative * f
-        phase -= phase[ index_min_phase_derivative ]
+        min_phase_derivative = min( phase_derivative[ mask ] )
+        # Adjust phase derivative 
+        phase_derivative -= min_phase_derivative
         
         #
-        return amplitude * exp( 1j * phase )
+        return amplitude,phase_derivative
     
-    #
-    def template_amp( f, mu2=0, nu5=0 ):
+    # #
+    # def template_amp( f, mu2=0, nu5=0 ):
         
-        # Set phase deviations to zero
-        # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
-        nu4=0
-        nu6=0
-        zeta2=0
+    #     # Set phase deviations to zero
+    #     # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
+    #     nu4=0
+    #     nu6=0
+    #     zeta2=0
         
-        # Calculate PhenomXPHM with the input amplitude deviations
-        # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-        multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
+    #     # Calculate PhenomXPHM with the input amplitude deviations
+    #     # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
+    #     multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
         
-        # Given the complex FD waveform, compute its amplitude
-        complex_strain = multipole_dict[ell,ell]
-        amplitude = abs(complex_strain)
+    #     # Given the complex FD waveform, compute its amplitude
+    #     complex_strain = multipole_dict[ell,ell]
+    #     amplitude = abs(complex_strain)
         
-        #
-        return amplitude
+    #     #
+    #     return amplitude
         
     # #
     # def template_dphi( f, nu4=0, nu5=0, nu6=0, zeta2=0 ):
@@ -327,35 +324,35 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
     #     #
     #     return phase_derivative
         
+    # #
+    # def make_template_dphi( mu2=0, nu5=0 ):
+        
+    #     #
+    #     def template_dphi( f, nu6=0, nu4=0, zeta2=0 ):
+            
+    #         # Set amplitude deviations to zero
+    #         mu4=0
+            
+    #         # Calculate PhenomXPHM with the input phase deviations
+    #         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
+    #         multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
+            
+    #         # Given the complex FD waveform, compute its amplitude
+    #         complex_strain = multipole_dict[ell,ell]
+    #         phase = unwrap( angle(complex_strain) )
+    #         phase_derivative = spline_diff(f,phase)
+    #         # Shift such that the min is zero
+    #         phase_derivative -= min( phase_derivative[ (f>0.03)&(f<0.12) ] )
+            
+    #         #
+    #         return phase_derivative
+            
+    #     #
+    #     return template_dphi
+        
+        
     #
-    def make_template_dphi( mu2=0, nu5=0 ):
-        
-        #
-        def template_dphi( f, nu6=0, nu4=0, zeta2=0 ):
-            
-            # Set amplitude deviations to zero
-            mu4=0
-            
-            # Calculate PhenomXPHM with the input phase deviations
-            # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
-            
-            # Given the complex FD waveform, compute its amplitude
-            complex_strain = multipole_dict[ell,ell]
-            phase = unwrap( angle(complex_strain) )
-            phase_derivative = spline_diff(f,phase)
-            # Shift such that the min is zero
-            phase_derivative -= min( phase_derivative[ (f>0.03)&(f<0.12) ] )
-            
-            #
-            return phase_derivative
-            
-        #
-        return template_dphi
-        
-        
-    #
-    return template_amp, make_template_dphi
+    return template_together # template_amp, make_template_dphi
 
 
 # Function to determine version2 data fitting region

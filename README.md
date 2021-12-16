@@ -3,6 +3,16 @@ High-level development of, PhenomXCP, PhenomXAS and PhenomXHM with some ferature
 
 -- Lionel London, londonl@mit.edu, l.t.london@uva.nl, pilondon2@gmail.com
 
+## Notes and Action Items (12/21)
+
+* We proceed tuning the low-level ringdown frequency, thus allowing changes to propagate to various aspects of the PhenomXAS layer
+
+* Both amplitude and phase ansatz depend on the ringdown frequency -- if this frequency is to be tuned, it must either be tuned for only one, or both simultaneously
+
+- [ ] Decide on approach for tuning `fring` and `fdamp`
+
+* 
+
 ## Notes and Action Items (11/21)
 
 **General idea for tuning**: Use `XLALSimIMRPhenomXASGenerateFD` as primary python interface (see previous notes). It takes as input a `LALDict`, `lalparams`, which can be setup to store parameters for amplitude and phase deviations. 
@@ -52,9 +62,9 @@ High-level development of, PhenomXCP, PhenomXAS and PhenomXHM with some ferature
   * Ringdown frequency and damping (LALSimIMRPhenomX_precession.c ~ Line 400). The EZH effective frequency will be directly modified. 
   *  
 
-- [ ] Identify key model parameters to change, and where to change them.
-- [ ] Write tuning appropriate python wrapper for `IMRPhenomXASGenerateFD`: given system masses and spins, output function parameterized only be deviations from base model
-- [ ] Initiate basic tuning tests with standard optimization routines
+- [x] Identify key model parameters to change, and where to change them.
+- [x] Write tuning appropriate python wrapper for `IMRPhenomXASGenerateFD`: given system masses and spins, output function parameterized only be deviations from base model
+- [x] Initiate basic tuning tests with standard optimization routines
  
 ## Notes and Action Items (8/21) 
 
