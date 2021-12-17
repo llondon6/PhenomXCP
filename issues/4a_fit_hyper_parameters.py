@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 # Setup python environment
 from matplotlib.pyplot import *
@@ -23,7 +23,7 @@ datadir = package_dir + 'data/version2/'
 
 # Load and unpuack physical parameter space
 raw_domain = loadtxt(datadir+'fit_intial_binary_parameters.txt')
-theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2 = raw_domain.T
+theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = raw_domain.T
 
 
 # Define desired model domain variables and array 
