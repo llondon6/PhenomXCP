@@ -123,7 +123,7 @@ def LALPolarizationsFD(approximant, lmlist, m1, m2, s1, s2, delta_f, phiRef=0,nu
 
 
 #
-def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=500, mu2=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta2=0 ):
+def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=500, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -202,12 +202,15 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         #
         
         # Set deviations from base model based on inputs
-        mu2,mu4,nu4,nu5,nu6,zeta2 = [ double(k) for k in (mu2,mu4,nu4,nu5,nu6,zeta2) ]
+        # mu2,mu3,mu4,nu4,nu5,nu6,zeta2 = [ double(k) for k in (mu2,mu3,mu4,nu4,nu5,nu6,zeta2) ]
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU1(lalparams, mu1)
         lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2(lalparams, mu2)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU3(lalparams, mu3)
         lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU4(lalparams, mu4)
         lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU4(lalparams, nu4)
         lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU5(lalparams, nu5)
         lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU6(lalparams, nu6)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA1(lalparams, zeta1)
         lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA2(lalparams, zeta2)
         
         #
@@ -255,15 +258,18 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
     lmlist = [ (ell,ell) ]
     
     #
-    def template_together( f, mu2=0, nu4=0, nu5=0, nu6=0 ):
+    def template_together( f, mu1=0, mu2=0, mu3=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
         
         # Set phase deviations to zero
         mu4=0 # No longer to be used as it is completely degenerate with nu5 in PhenomX
-        zeta2=0
         
         # Calculate PhenomXPHM with the input amplitude deviations
         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-        multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
+        # print('>> ',mu2, mu3, nu4, nu5, nu6)
+        try:
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+        except:
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0 )
         
         # 
         complex_strain = multipole_dict[ell,ell]
@@ -439,15 +445,16 @@ def determine_data_fitting_region(data, threshold=0.015):
     # 4. Use the lorentzian_mindex to define the start and end of the fitting region
     f_lorentzian_min = f[pre_mask][ lorentzian_mindex ]
     # f_lorentzian_min = f[mask_1][mask_2][ lorentzian_mindex ]
-    f_min = max(f_lorentzian_min * 0.22, 0.018) 
-    f_max = f_lorentzian_min + 0.012
+    f_min = f_lorentzian_min * 0.2 
+    # f_min = max(f_lorentzian_min * 0.22, 0.018) 
+    f_max = f_lorentzian_min + 0.02# 0.018 # 0.012
     calibration_mask = arange(len(f))[(f>=f_min) & (f<=f_max)]
     
     # 5. Select region for output 
     calibration_data = data.T[ calibration_mask ]
     # 6. Smooth phase derivative data and subtract min
     calibration_data.T[2] = dphi_fd[calibration_mask] - dphi_lorentzian_min
-    # calibration_data.T[2] = smooth( dphi_fd, width=30 ).answer[calibration_mask] - dphi_lorentzian_min
+    # calibration_data.T[2] = smooth( dphi_fd, width=10 ).answer[calibration_mask] - dphi_lorentzian_min
     # calibration_data.T[2] = smooth( calibration_data.T[2], width=30 ).answer
     
 
