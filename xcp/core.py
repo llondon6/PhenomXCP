@@ -447,7 +447,7 @@ def determine_data_fitting_region(data, threshold=0.015):
     # f_lorentzian_min = f[mask_1][mask_2][ lorentzian_mindex ]
     f_min = f_lorentzian_min * 0.2 
     # f_min = max(f_lorentzian_min * 0.22, 0.018) 
-    f_max = f_lorentzian_min + 0.02# 0.018 # 0.012
+    f_max = f_lorentzian_min + 0.012# 0.018 # 0.012
     calibration_mask = arange(len(f))[(f>=f_min) & (f<=f_max)]
     
     # 5. Select region for output 
@@ -524,13 +524,13 @@ def advanced_gmvx_plot( fit_object ):
     
     from matplotlib.pyplot import subplots, plot, xlabel, ylabel, title, sca, gca, figaspect, tight_layout
     from numpy import cos,sin,array,around,ones_like,sort,pi,linspace
-    from positive import eta2q,q2eta,eta2delta
+    from positive import eta2q,q2eta,eta2delta,rgb
     from glob import glob
-    from pwca import determine_data_fitting_region,pwca_catalog,metadata_dict
+    from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict
     
-    # Load and unpuack physical parameter space
-    raw_domain = loadtxt(data_dir+'version2/fit_intial_binary_parameters.txt')
-    theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2 = raw_domain.T
+    # Load and unpack physical parameter space
+    raw_domain = loadtxt(data_dir+'version2/fit_initial_binary_parameters.txt')
+    theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_ = raw_domain.T
 
 
     # Define desired model domain variables and array 
@@ -547,7 +547,7 @@ def advanced_gmvx_plot( fit_object ):
     a1_set = array(sort(list( set(a1_point) )))
 
     # Collect set of unique angle values
-    degree_point = (theta*180/pi).astype(int)
+    degree_point = (around( (theta*180/pi)/10 )*10).astype(int)
     theta_point = degree_point*pi/180
     theta_set = array(sort(list( set(theta_point) )))
 
@@ -573,9 +573,12 @@ def advanced_gmvx_plot( fit_object ):
     set_fig_ax = set_fig_ax.flatten();
     tight_layout(4,4)
     ax_counter = 0
+    
+    #
+    colors = rgb(len(a1_set),jet=True)
 
     #
-    for _a1 in a1_set:
+    for k,_a1 in enumerate(a1_set):
         for _theta in theta_set:
 
             #
@@ -602,7 +605,8 @@ def advanced_gmvx_plot( fit_object ):
 
             #
             sca(ax[0])
-            ax[0].plot3D( case_u, case_eta, case_range, lw=1, alpha=1, color = 'tab:blue' if _a1==a1_set[0] else 'red' )
+            ax[0].plot3D( case_u, case_eta, case_range, lw=1, alpha=1, color=colors[k] )
+            # ax[0].plot3D( case_u, case_eta, case_range, lw=1, alpha=1, color = 'tab:blue' if _a1==a1_set[0] else 'red' )
             
             #
             sca( set_fig_ax[ax_counter] ); ax_counter += 1
@@ -618,12 +622,12 @@ def advanced_gmvx_plot( fit_object ):
     #
     num_figs = len(a1_set)*len(eta_set)
     theta_set_figs,set_fig_ax = subplots( len(a1_set), len(eta_set), figsize=5*array([ len(eta_set),len(a1_set) ]) )
-    set_fig_ax = set_fig_ax.flatten();
+    set_fig_ax = set_fig_ax.flatten()
     tight_layout(4,4)
     ax_counter = 0
 
     #
-    for _a1 in a1_set:
+    for k,_a1 in enumerate(a1_set):
         for _eta in eta_set:
 
             #
@@ -649,7 +653,8 @@ def advanced_gmvx_plot( fit_object ):
 
             #
             sca(ax[0])
-            ax[0].plot3D( case_u, case_eta, case_range, lw=1, alpha=1, color = 'tab:blue' if _a1==a1_set[0] else 'red' )
+            ax[0].plot3D( case_u, case_eta, case_range, lw=1, alpha=1, color=colors[k] )
+            # ax[0].plot3D( case_u, case_eta, case_range, lw=1, alpha=1, color = 'tab:blue' if _a1==a1_set[0] else 'red' )
             
             #
             sca( set_fig_ax[ax_counter] ); ax_counter += 1
