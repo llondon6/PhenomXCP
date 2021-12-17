@@ -73,13 +73,14 @@ for f_ in files[::-1]:
 
     #
     f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
-    theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_vec,chi2_vec = metadata_dict['array_data'][k]
+    theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = metadata_dict['array_data'][k]
+    chi1_vec = array([chi1_x,chi1_y,chi1_z])
+    chi2_vec = array([chi2_x,chi2_y,chi2_z])
     #dphi_fd -= min( dphi_fd[ (f>0.03)&(f<0.12) ] )
     
     #
-    template_amp, template_dphi = template_amp_phase(m1, m2, chi1_vec, chi2_vec,ell=2)
-    mod_xhm0_amp  = template_amp(f)
-    mod_xhm0_dphi = template_dphi(f)
+    action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,ell=2)
+    mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
     
     #
     mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec )

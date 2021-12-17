@@ -104,8 +104,12 @@ for f in files:
                        chi2,
                        a1,
                        a2,
-                       chi1_vec,
-                       chi2_vec ] )
+                       chi1_vec[0],
+                       chi1_vec[1],
+                       chi1_vec[2],
+                       chi2_vec[0],
+                       chi2_vec[1],
+                       chi2_vec[2] ] )
 
 #
 print( 'Done.')
@@ -114,7 +118,7 @@ print( 'Done.')
 metadata_array = array(metadata)
 
 #
-keys = [ 'theta', 'm1', 'm2', 'eta', 'delta', 'chi_eff', 'chi_p', 'chi1', 'chi2', 'a1', 'a2', 'chi1_vec', 'chi2_vec' ]
+keys = [ 'theta', 'm1', 'm2', 'eta', 'delta', 'chi_eff', 'chi_p', 'chi1', 'chi2', 'a1', 'a2', 'chi1_vec_x', 'chi1_vec_y', 'chi1_vec_z', 'chi2_vec_x', 'chi2_vec_y', 'chi2_vec_z' ]
 
 #
 metadata_dict = {}

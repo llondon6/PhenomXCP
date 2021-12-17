@@ -1,148 +1,160 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
-# Setup ipython environment
+# Setup the environment
+import lalsimulation as lalsim
 from matplotlib.pyplot import *
 from numpy import *
 from positive import *
 from nrutils import scsearch, gwylm
 from glob import glob
 import xcp
-from xcp import determine_data_fitting_region,xcp_catalog,metadata_dict
+from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict,template_amp_phase
 
+# Let the user know where lalsimulation lives
+
+#
+lalsim_path = lalsim.__path__[0]
+lalsuite_repo_path = lalsim_path.split('lib')[0]+'src/lalsuite/'
+branch_name = bash('cd %s && git status'%lalsuite_repo_path).decode("utf-8").split('On branch ')[-1].split('\n')[0]
+
+#
+alert('We are getting our LALSimulation from:\n%s'%magenta(lalsim_path))
+alert('We think that the related lalsuite source files are here:\n%s'%green(lalsuite_repo_path))
+alert('Lastly, we are currently on this branch: %s'%bold(magenta(branch_name)))
+
+#
+if branch_name != 'pnrv1-ll':
+    alert('We are not on the expected branch. This may cause unexpected behavior.',say=True)
 
 #
 from numpy.linalg import norm
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit,minimize,fmin
 
 #
-package_dir = parent( xcp.__path__[0] )
-datadir = package_dir + 'data/version2/'
-files = glob( datadir+'q*.txt' )
+ll = 2
 
 #
-fig,ax = subplots( len(files), 2, figsize=2.5*array([ 2.5*2/(0.618), 1.5*len(files) ]) )
+datadir = '/Users/book/KOALA/PhenomXCP/data/version2/'
+files = glob( datadir+'*_l%im%i.txt'%(ll,ll) )
+files.sort()
+
+files = files[::-1]
+
+#
+fig,ax = subplots( len(files), 2, figsize=3*array([ 2.5*2/(0.618), 2.0*len(files) ]) )
 ax = ax.flatten()
 
 #
 tight_layout(1,2,4)
 
 #
-alert(yellow('NOTE that we fit both phase and phase derivate to provide a validation option.'),header=True)
-
-#
 foo = {}
 
 #
+lmlist = [ (ll,ll) ]
+
+#
 p = 0
-amp_popt_array  = zeros( (len(files),2) )
-phi_popt_array  = zeros( (len(files),4) )
-dphi_popt_array = zeros( (len(files),4) )
-amp_pcov_list, dphi_pcov_list, phi_pcov_list = [],[],[]
-physical_param_array = zeros( (len(files), 11) )
+popt_array  = zeros( (len(files),8) )
+fit_obj_list = []
+physical_param_array = zeros( (len(files), 17) )
 alert('Plotting ...')
 for j,f_ in enumerate(files):
 
     #
-    simname = f_.split('/')[-1].split('.')[0]
-    
+    simname = f_.split('/')[-1].split('_l%im%i.'%(ll,ll))[0]
+
     # Find index location of metadata for simname 
-    k = list( metadata_dict['simname'] ).index(simname)
-    
+    k = [ k for k,val in enumerate(metadata_dict['simname']) if val in simname ][0]
+
     # Load data for this case
     raw_data = loadtxt(f_).T
-    data,_,fmin,fmax,fknot = determine_data_fitting_region(raw_data)
-    
+    calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data )
+
     # Collect params for this case 
     metadata = metadata_dict['array_data'][k,:]
+
+    #
+    f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
+    theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = metadata_dict['array_data'][k]
     
     #
-    f,amp_fd,dphi_fd,alpha,beta,gamma = data.T
-    theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2 = metadata_dict['array_data'][k]
+    chi1_vec = array([chi1_x,chi1_y,chi1_z])
+    chi2_vec = array([chi2_x,chi2_y,chi2_z])
     
     #
     physical_param_array[j,:] = metadata_dict['array_data'][k]
     
     # GENERATE TEMPLATE FUNCTIONS
     # ---
-    template_amp, template_dphi = xcp.template_amp_phase(m1, m2, chi1, chi2, chi_p)
+    action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,ell=2)
+    def action( p ):
+        #
+        amplitude,phase_derivative = action_helper( f, *p )
+        # -- Calculate residual of phase derivative -- #
+        residual_phase_derivative = sum((dphi_fd - phase_derivative)**2) / std(dphi_fd)
+        # -- Calculate residual of amplitude --------- #
+        amp_scale = f ** (7.0/6)
+        inv_amp_scale = f ** (-7.0/6)
+        log_scaled_amp_fd = log( amp_fd * amp_scale )
+        log_scaled_amplitude = log( amplitude * amp_scale )
+        residual_amplitude = sum((log_scaled_amp_fd - log_scaled_amplitude)**2) / std(log_scaled_amp_fd)
+        # -- Combine residuals ----------------------- #
+        combined_residual = residual_phase_derivative + residual_amplitude
+        #
+        return combined_residual
     
-    # DEFINE DATA TO USE FOR CALIBRATION
+    # PERFORM FIT
     # --- 
     
-    CALIBRATION_DPHI = dphi_fd
-    CALIBRATION_AMP  = amp_fd
+    # Calculate default model amp and phase derivative
+    mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
     
-    # PHASE DERIVATIVE
-    # ---
-
-    # NOTE that the td phase derivative  is used to exact consistency with the models of coprecessing angles
-    phenomd_dphi = template_dphi(f)
-    dphi_popt, dphi_pcov = curve_fit(template_dphi, f, CALIBRATION_DPHI,p0=[0,0,0,0])
-    best_fit_dphi = template_dphi(f,*dphi_popt)
+    # Perform fit
+    foo = minimize( action,[0,0,0,0,0,0,0,0] )
+    best_fit_amp,best_fit_dphi = action_helper( f, *foo.x )
     
-    #
-    dphi_popt_array[j,:] = dphi_popt
-    dphi_pcov_list.append( dphi_pcov )
-    
-    # AMPLITUDE
-    # ---
-    
-    #
-    amp_scale = f ** (7.0/6)
-    inv_amp_scale = f ** (-7.0/6)
-    
-    #
-    log_scaled_template_amp = lambda X,MU2,MU4: log(  template_amp(X,MU2,MU4)*amp_scale  )
-    phenomd_amp = template_amp(f)
-    
-    # NOTE that the td amplitude is used to exact consistency with the models of coprecessing angles
-    scaled_amp = CALIBRATION_AMP * amp_scale
-    log_scaled_amp = log(scaled_amp)
-    log_scaled_amp_popt, log_scaled_amp_pcov = curve_fit(log_scaled_template_amp, f, log_scaled_amp,p0=[0,0])
-    best_fit_amp = exp(log_scaled_template_amp(f,*log_scaled_amp_popt)) * inv_amp_scale
-    
-    #
-    amp_popt_array[j,:] = log_scaled_amp_popt
-    amp_pcov_list.append( log_scaled_amp_pcov )
+    # Store fit params and cov 
+    popt_array[j,:] = foo.x
+    fit_obj_list.append( foo )
     
     # PLOTTING
     # ---
     
-    #subplot(1,2,1)
+    #
     sca(ax[p]); p+=1
-    plot( f, phenomd_dphi, label='PhenomD', ls='--',alpha=0.9,color='k',lw=2 )
-    plot( f, dphi_fd, label='NR:Precessing (FD)', color='k', alpha=0.30, lw=6, ls=':' )
-    plot( f, best_fit_dphi, label='Best Fit (dphi fit)', color='r', ls='-',lw=2 )
+    plot( f, dphi_fd, label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
+    plot( f, mod_xhm0_dphi, label='PhenomX(0)', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
+    plot( f, best_fit_dphi, label='Best Fit', color='r', ls='-' )
+    xscale('log')
+    xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
+    ylim( limy(f, dphi_fd,dilate=0.1) )
     title(simname,size=12,loc='left')
     legend(ncol=2,loc=1)
     ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{22})$')
-    xscale('log')
-    #
-    title(f_.split('/')[-1].split('.')[0],loc='left',size=12)
-    if (p==(2*len(files)-1)) or (p==1):  xlabel('$fM$')
+    xlabel('$fM$')
+    title(simname,loc='left',size=12)
     
-    #subplot(1,2,2)
+    #
     sca(ax[p]); p+=1
-    plot( f, phenomd_amp, label='PhenomD', ls='--',alpha=0.9,color='k',lw=2 )
-    plot( f, amp_fd, label='NR:Precessing (FD)', color='k', alpha=0.30, lw=6, ls=':' )
-    plot( f, best_fit_amp, label='Best Fit (TD)', color='r', ls='-',lw=2 )
-    title(simname,size=12,loc='left')
-    xscale('log')
+    plot( f, amp_fd, label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
+    plot( f, mod_xhm0_amp, label='PhenomX(0)', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
+    plot( f, best_fit_amp, label='Best Fit', color='r', ls='-' )
     yscale('log')
+    xscale('log')
     legend(ncol=2,loc=3)
-    #ylim(1e-1,2e1)
+    ylim( limy(f, amp_fd,dilate=1.2) )
+    xlabel('$fM$')
     ylabel(r'$|\tilde{h}_{22}(f)|$')
-    #
-    title(f_.split('/')[-1].split('.')[0],loc='left',size=12)
-    if (p==(2*len(files))) or (p==2):  xlabel('$fM$')
+    title(simname,loc='left',size=12)
     
     #
-    print '.',
+    print( '.',end='')
         
 #
-print ''
+print( '')
 alert('Done.')
-file_path = datadir+'waveform_fit_diagnostic.pdf'
+file_path = datadir+'waveform_fit_diagnostic_l%im%i.pdf'%(ll,ll)
 alert('Saving batch plot to %s'%magenta(file_path))
 savefig(file_path,pad_inches=2, bbox_inches = "tight")
 
@@ -150,39 +162,19 @@ savefig(file_path,pad_inches=2, bbox_inches = "tight")
 # --
 
 # Initial binary parameters
-data_path = datadir+'fit_intial_binary_parameters.txt'
+data_path = datadir+'fit_initial_binary_parameters.txt'
 alert('Saving %s to %s'%( magenta('physical_param_array'), magenta(data_path)) )
-savetxt( data_path, physical_param_array, header='see "issues/3_collect_metadata.py"; columns are theta, m1, m2, eta, delta, chi_eff, chi_p, chi1, chi2, a1, a2' )
+savetxt( data_path, physical_param_array, header='see "issues/3a_collect_metadata.py"; columns are theta, m1, m2, eta, delta, chi_eff, chi_p, chi1, chi2, a1, a2, chi1_L_x, chi1_L_y, chi1_L_z, chi2_L_x, chi2_L_y, chi2_L_z' )
 
-# Amplitude fit parameters
-data_path = datadir+'fit_opt_amplitude_parameters.txt'
-alert('Saving %s to %s'%( magenta('amp_popt_array'), magenta(data_path)) )
-savetxt( data_path, amp_popt_array, header='see "template_amp_phase()" in ansatz.py; columns are mu1, mu2, mu4' )
-
-# Phase derivative fit parameters
-data_path = datadir+'fit_opt_dphase_parameters.txt'
+# Fit parameters
+data_path = datadir+'fit_opt_parameters.txt'
 alert('Saving %s to %s'%( magenta('dphi_popt_array'), magenta(data_path)) )
-savetxt( data_path, dphi_popt_array, header='see "template_amp_phase())" in ansatz.py; columns are nu4, nu5, nu6' )
-
-# Phase fit parameters
-data_path = datadir+'fit_opt_phase_parameters.txt'
-alert('Saving %s to %s'%( magenta('dphi_popt_array'), magenta(data_path)) )
-savetxt( data_path, phi_popt_array, header='see "template_amp_phase()" in ansatz.py; columns are nu4, nu5, nu6' )
+savetxt( data_path, phi_popt_array, header='see "template_together()" in core.py; columns are mu1, mu2, mu3, nu4, nu5, nu6, zeta1, zeta2' )
 
 #
-data_path = datadir+'fit_pcov_dphase.pickle'
-alert('Saving dphi_pcov_list to %s'%magenta(data_path))
-pickle.dump( dphi_pcov_list, open( data_path, "wb" ) )
-
-#
-data_path = datadir+'fit_pcov_phase.pickle'
-alert('Saving dphi_pcov_list to %s'%magenta(data_path))
-pickle.dump( dphi_pcov_list, open( data_path, "wb" ) )
-
-#
-data_path = datadir+'fit_pcov_amp.pickle'
-alert('Saving amp_pcov_list to %s'%magenta(data_path))
-pickle.dump( amp_pcov_list, open( data_path, "wb" ) )
+data_path = datadir+'fit_objects.pickle'
+alert('Saving dphi_fit_obj_list to %s'%magenta(data_path))
+pickle.dump( fit_obj_list, open( data_path, "wb" ) )
 
 #
 alert('Fitting complete.')
