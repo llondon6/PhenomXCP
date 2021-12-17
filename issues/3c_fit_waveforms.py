@@ -153,10 +153,10 @@ for j,f_ in enumerate(files):
         
 #
 print( '')
-alert('Done.')
 file_path = datadir+'waveform_fit_diagnostic_l%im%i.pdf'%(ll,ll)
 alert('Saving batch plot to %s'%magenta(file_path))
 savefig(file_path,pad_inches=2, bbox_inches = "tight")
+alert('Done.')
 
 # SAVE FIT DATA
 # --
@@ -169,11 +169,11 @@ savetxt( data_path, physical_param_array, header='see "issues/3a_collect_metadat
 # Fit parameters
 data_path = datadir+'fit_opt_parameters.txt'
 alert('Saving %s to %s'%( magenta('dphi_popt_array'), magenta(data_path)) )
-savetxt( data_path, phi_popt_array, header='see "template_together()" in core.py; columns are mu1, mu2, mu3, nu4, nu5, nu6, zeta1, zeta2' )
+savetxt( data_path, popt_array, header='see "template_together()" in core.py; columns are mu1, mu2, mu3, nu4, nu5, nu6, zeta1, zeta2' )
 
 #
 data_path = datadir+'fit_objects.pickle'
-alert('Saving dphi_fit_obj_list to %s'%magenta(data_path))
+alert('Saving fit_obj_list to %s'%magenta(data_path))
 pickle.dump( fit_obj_list, open( data_path, "wb" ) )
 
 #
