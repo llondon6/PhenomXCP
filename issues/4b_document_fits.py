@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 # Setup python environment
 from matplotlib.pyplot import *
@@ -6,8 +6,8 @@ from numpy import *
 from positive import *
 from nrutils import scsearch, gwylm
 from glob import glob
-import pwca
-from pwca import determine_data_fitting_region,pwca_catalog,metadata_dict,parama_party,advanced_gmvx_plot
+import xcp
+from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict,parama_party,advanced_gmvx_plot,template_amp_phase
 
 # --------------------------------------- #
 # Preliminaries
@@ -15,38 +15,40 @@ from pwca import determine_data_fitting_region,pwca_catalog,metadata_dict,parama
 
 #Load parameter space fit data
 alert('Loading parameter space fit data.')
-package_dir = parent( pwca.__path__[0] )
+package_dir = parent( xcp.__path__[0] )
 datadir = package_dir + 'data/version2/'
 foo_path = datadir+'parameter_space_fits.pickle'
 foo = pickle.load( open( foo_path, "rb" ) )
 
 # Load and unpuack physical parameter space
-raw_domain = loadtxt(datadir+'fit_intial_binary_parameters.txt')
-theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2 = raw_domain.T
+raw_domain = loadtxt(datadir+'fit_initial_binary_parameters.txt')
+theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = raw_domain.T
 
 # --------------------------------------- #
 # Plot ans save fits 
 # --------------------------------------- #
 
-# Collect set of unique a1 values
-a1_point = around(a1,2)
-a1_set = array(sort(list( set(a1_point) )))
+# # Collect set of unique a1 values
+# a1_point = around(a1,2)
+# a1_set = array(sort(list( set(a1_point) )))
 
-# Collect set of unique angle values
-degree_point = (theta*180/pi).astype(int)
-theta_point = degree_point*pi/180
-theta_set = array(sort(list( set(theta_point) )))
+# # Collect set of unique angle values
+# degree_point = (theta*180/pi).astype(int)
+# theta_point = degree_point*pi/180
+# theta_set = array(sort(list( set(theta_point) )))
 
-# Collect set of unique mass-ratio values
-q_point = around(array([eta2q(n) for n in eta]),2)
-q_set = array(sort(list( set(q_point) )))
+# # Collect set of unique mass-ratio values
+# q_point = around(array([eta2q(n) for n in eta]),2)
+# q_set = array(sort(list( set(q_point) )))
 
-# Collect set of unique eta values
-eta_point = q2eta( q_point )
-eta_set = q2eta(q_set)
+# # Collect set of unique eta values
+# eta_point = q2eta( q_point )
+# eta_set = q2eta(q_set)
 
 #
-fit_object = { k:foo[k] for k in foo if ('nu' in k) or ('mu' in k) or ('zeta' in k) }
+scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),ell=2)
+parameter_names_in_order = scarecrow.__code__.co_varnames[1:scarecrow.__code__.co_argcount]
+fit_object = { k:foo[k] for k in parameter_names_in_order }
 
 #
 for key in fit_object:
@@ -125,7 +127,7 @@ code_string.append( '\t#\n' )
 code_string.append( '\treturn %s\n'%(','.join(fit_var)) )
 
 # Write fit equations to file 
-codedir = package_dir+'pwca/'
+codedir = package_dir+'xcp/'
 code_path = codedir+'parameter_space_fits.py'
 alert('Write fit equations to file at %s'%magenta(code_path))
 f = open(code_path,'w+')

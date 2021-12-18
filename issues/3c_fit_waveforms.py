@@ -9,6 +9,8 @@ from nrutils import scsearch, gwylm
 from glob import glob
 import xcp
 from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict,template_amp_phase
+from numpy.linalg import norm
+from scipy.optimize import curve_fit,minimize,fmin
 
 # Let the user know where lalsimulation lives
 
@@ -27,18 +29,17 @@ if branch_name != 'pnrv1-ll':
     alert('We are not on the expected branch. This may cause unexpected behavior.',say=True)
 
 #
-from numpy.linalg import norm
-from scipy.optimize import curve_fit,minimize,fmin
-
-#
 ll = 2
 
 #
 datadir = '/Users/book/KOALA/PhenomXCP/data/version2/'
 files = glob( datadir+'*_l%im%i.txt'%(ll,ll) )
 files.sort()
-
 files = files[::-1]
+
+# Get number of parameters to be tuned
+scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),ell=2)
+var_count = scarecrow.__code__.co_argcount - 1
 
 #
 fig,ax = subplots( len(files), 2, figsize=3*array([ 2.5*2/(0.618), 2.0*len(files) ]) )
@@ -55,7 +56,7 @@ lmlist = [ (ll,ll) ]
 
 #
 p = 0
-popt_array  = zeros( (len(files),8) )
+popt_array  = zeros( (len(files),var_count) )
 fit_obj_list = []
 physical_param_array = zeros( (len(files), 17) )
 alert('Plotting ...')
@@ -111,10 +112,11 @@ for j,f_ in enumerate(files):
     mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
     
     # Perform fit
-    foo = minimize( action,[0,0,0,0,0,0,0,0] )
+    foo = minimize( action,zeros(var_count) )
     best_fit_amp,best_fit_dphi = action_helper( f, *foo.x )
     
     # Store fit params and cov 
+    alert(foo.x,header=True)
     popt_array[j,:] = foo.x
     fit_obj_list.append( foo )
     

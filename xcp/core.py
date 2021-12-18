@@ -261,11 +261,10 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
     def template_together( f, mu1=0, mu2=0, mu3=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
         
         # Set phase deviations to zero
-        mu4=0 # No longer to be used as it is completely degenerate with nu5 in PhenomX
+        mu4 = 0 # No longer to be used as it is completely degenerate with nu5 in PhenomX
         
         # Calculate PhenomXPHM with the input amplitude deviations
         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-        # print('>> ',mu2, mu3, nu4, nu5, nu6)
         try:
             multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
         except:
@@ -747,3 +746,50 @@ def gwylmo_cpclean( gwylmo, verbose=False, safe_domain_range=None, cp_domain=Non
     # Return answer
     ans = y3
     return ans
+
+
+
+# Given underlying physical parameters, calculate ones useful form modeling
+def parama_party( eta,theta,a1 ):
+    '''
+    PARAMA-PARTY:
+    If L || z and m1>m2 and q=m1/m2, then 
+
+    S2 = 0
+    S1 = m1**2 a1 * exp( 1j * theta ) = Sz + 1j*Sperp
+    X1 = X = S1/m1**2
+
+    chi_eff = m1*a1*cos(theta)/(m1+m2) = a1*cos(theta)*/(1+1.0/q)
+
+    A1 = 2 + (3*m2)/(2*m1)
+    A2 = 2 + (3*m1)/(2*m2)
+    B1 = A1 * a1*sin(theta)
+    B2 = 0
+    chi_p = max( B1,B2 ) / ( A1 * m1*m1 )
+    L = L
+
+    '''
+    
+    #
+    from positive import eta2m1m2
+    from numpy import cos,sin,maximum
+    
+    #
+    m1,m2 = eta2m1m2(eta)
+    
+    #
+    q = m1/m2
+    chi_eff = m1*a1*cos(theta)/(m1+m2)
+    
+    #
+    A1 = 2 + (3.0*m2)/(2.0*m1)
+    Norm_S1_perp = abs(a1*sin(theta)*m1*m1)
+    B1 = A1 * Norm_S1_perp 
+    chi_p = maximum( B1,0 ) / ( A1 * m1*m1 )
+    
+    '''
+    NOTE that the above is basically a1*sin(theta), but we retain the additional steps to illustrate consistency with the more general formula
+    '''
+    
+    #
+    return chi_eff, chi_p
