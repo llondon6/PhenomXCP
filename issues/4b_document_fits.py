@@ -7,7 +7,7 @@ from positive import *
 from nrutils import scsearch, gwylm
 from glob import glob
 import xcp
-from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict,parama_party,advanced_gmvx_plot,template_amp_phase
+from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict,advanced_gmvx_plot,template_amp_phase
 
 # --------------------------------------- #
 # Preliminaries
@@ -27,23 +27,6 @@ theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,
 # --------------------------------------- #
 # Plot ans save fits 
 # --------------------------------------- #
-
-# # Collect set of unique a1 values
-# a1_point = around(a1,2)
-# a1_set = array(sort(list( set(a1_point) )))
-
-# # Collect set of unique angle values
-# degree_point = (theta*180/pi).astype(int)
-# theta_point = degree_point*pi/180
-# theta_set = array(sort(list( set(theta_point) )))
-
-# # Collect set of unique mass-ratio values
-# q_point = around(array([eta2q(n) for n in eta]),2)
-# q_set = array(sort(list( set(q_point) )))
-
-# # Collect set of unique eta values
-# eta_point = q2eta( q_point )
-# eta_set = q2eta(q_set)
 
 #
 scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),ell=2)
