@@ -60,7 +60,10 @@ for key in model_range:
     
     alert('Now fitting %s'%red(key),header=True)
     
-    foo[key] = gmvpfit( model_domain, model_range[key],fitatol=0.001,verbose=True,maxdeg_list=[4,3,0,3],center=True,estatol=0.015)
+    #
+    labels={'python':[key,('u', 'eta', 'delta', 'a1'),''],'latex':['\\'+key[:-1]+'_'+key[-1],(r'\cos(\theta)', r'\eta', r'\delta', r'a_1'),'']}
+    
+    foo[key] = gmvpfit( model_domain, model_range[key],fitatol=0.001,verbose=True,maxdeg_list=[4,3,0,3],center=True,estatol=0.015,labels=labels)
 
 # # nu4
 # # ---
