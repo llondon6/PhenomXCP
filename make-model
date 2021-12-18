@@ -24,7 +24,8 @@ $basedir/3c_fit_waveforms.py
 # Fit model parameters across physical parameter space and then document
 # --
 $basedir/4a_fit_hyper_parameters.py
-$basedir/4b_document_fits.py
+$basedir/4b_make_fit_diagnostic_plots.py
+$basedir/4c_convert_fits_to_code.py
 
 # # Generate late stage diagnostic plots
 # # --
