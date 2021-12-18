@@ -8,6 +8,8 @@ static double IMRPhenomXCP_MU1( double theta, double eta, double a1 );
 static double IMRPhenomXCP_MU2( double theta, double eta, double a1 );
 // Header formatting for MU3
 static double IMRPhenomXCP_MU3( double theta, double eta, double a1 );
+// Header formatting for MU4
+static double IMRPhenomXCP_MU4( double theta, double eta, double a1 );
 // Header formatting for NU4
 static double IMRPhenomXCP_NU4( double theta, double eta, double a1 );
 // Header formatting for NU5

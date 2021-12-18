@@ -258,10 +258,7 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
     lmlist = [ (ell,ell) ]
     
     #
-    def template_together( f, mu1=0, mu2=0, mu3=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
-        
-        # Set phase deviations to zero
-        mu4 = 0 # No longer to be used as it is completely degenerate with nu5 in PhenomX
+    def template_together( f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
         
         # Calculate PhenomXPHM with the input amplitude deviations
         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model

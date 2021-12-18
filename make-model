@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
 #
+conda activate hack-phenomx3
+
+#
 basedir=/Users/book/KOALA/PhenomXCP/issues
 
 # Collection of NR data
@@ -19,7 +22,7 @@ basedir=/Users/book/KOALA/PhenomXCP/issues
 # Fit waveforms and organize metadata
 # --
 # $basedir/3b_plot_prefit_diagnostic.py
-$basedir/3c_fit_waveforms.py
+# $basedir/3c_fit_waveforms.py
 
 # Fit model parameters across physical parameter space and then document
 # --
