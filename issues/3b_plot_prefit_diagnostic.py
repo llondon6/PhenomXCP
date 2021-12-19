@@ -114,7 +114,7 @@ for f_ in files[::-1]:
     yscale('log')
     xscale('log')
     legend(ncol=2)
-    ylim( limy(f, amp_fd,dilate=5) )
+    ylim( limy(f, amp_fd,dilate=1.2) )
     xlabel('$fM$')
     ylabel(r'$|\tilde{h}_{22}(f)|$')
     #
