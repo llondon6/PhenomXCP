@@ -96,8 +96,8 @@ for f_ in files[::-1]:
     #
     sca(ax[p]); p+=1
     plot( f, dphi_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
-    plot( f, mod_xhm_dphi, label='PhenomX(500)', ls='--',lw=2,alpha=0.85,color='r' )
-    plot( f, mod_xhm0_dphi, label='PhenomX(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+    plot( f, mod_xhm_dphi, label='PhenomXP(500)', ls='--',lw=2,alpha=0.85,color='r' )
+    plot( f, mod_xhm0_dphi, label='PhenomXP(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
     xscale('log')
     xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
     ylim( limy(f, mod_xhm_dphi,dilate=0.1) )
@@ -109,8 +109,8 @@ for f_ in files[::-1]:
 
     sca(ax[p]); p+=1
     plot( f, amp_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
-    plot( f, mod_xhm_amp, label='PhenomX(500)', ls='--',lw=2,alpha=0.85,color='r' )
-    plot( f, mod_xhm0_amp, label='PhenomX(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+    plot( f, mod_xhm_amp, label='PhenomXP(500)', ls='--',lw=2,alpha=0.85,color='r' )
+    plot( f, mod_xhm0_amp, label='PhenomXP(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
     yscale('log')
     xscale('log')
     legend(ncol=2)

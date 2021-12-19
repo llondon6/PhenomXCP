@@ -93,10 +93,111 @@ f.close()
 
 
 #
-header_string = '\n\n/* Header file for IMRPhenomXCP\'s tuned parameters */\n\n' 
+header_string_preamble = '''
+#ifndef _LALSIM_IMR_PHENOMX_PNR_DEVIATIONS_H
+#define _LALSIM_IMR_PHENOMX_PNR_DEVIATIONS_H
+/*
+ * Copyright (C) 2021 The University of Amsterdam
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with with program; see the file COPYING. If not, write to the
+ *  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ *  MA  02110-1301  USA
+ */
+
+
+/**
+ * \\author Lionel London
+ */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __GNUC__
+#define UNUSED __attribute__ ((unused))
+#else
+#define UNUSED
+#endif
+
+
+// 
+#include <math.h>
+
+'''
+
+code_string_preamble = '''
+/*
+ * Copyright (C) 2021 The University of Amsterdam
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with with program; see the file COPYING. If not, write to the
+ *  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ *  MA  02110-1301  USA
+ */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * \\author Lionel London
+ */
+
+//
+#include "LALSimIMRPhenomX_PNR_deviations.h"
+
+#ifndef _OPENMP
+#define omp ignore
+#endif
+
+#ifndef PHENOMXHMDEBUG
+#define DEBUG 0
+#else
+#define DEBUG 1
+#endif
+
+'''
+
+code_string_ending = '''
+#ifdef __cplusplus
+}
+#endif
+'''
+
+header_string_ending = '''
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+'''
 
 #
-code_string = ['\n\n// Import usefuls\n', '#include <math.h>\n\n']
+header_string = header_string_preamble+'\n/* Header file for IMRPhenomXCP\'s tuned parameters */\n\n' 
+
+#
+code_string = [code_string_preamble+'\n// Import usefuls\n', '#include <math.h>\n\n']
 
 #
 for k in parameter_names_in_order:
@@ -106,7 +207,7 @@ for k in parameter_names_in_order:
     this_model_string = this_model_string.replace('lambda u,eta,delta,a1: ','')
     
     #
-    this_header_string = '// Header formatting for %s\nstatic double IMRPhenomXCP_%s( double theta, double eta, double a1 )'%(k.upper(),k.upper())
+    this_header_string = '// Header formatting for %s\ndouble IMRPhenomXCP_%s( double theta, double eta, double a1 )'%(k.upper(),k.upper())
     header_string += this_header_string + ';\n'
     
     #
@@ -156,6 +257,10 @@ for k in parameter_names_in_order:
     #
     code_string.append( this_code_string )
         
+
+#
+code_string += code_string_ending
+header_string += header_string_ending
 
 # Write fit equations to file 
 codedir = package_dir+'xcp/'

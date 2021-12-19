@@ -46,7 +46,7 @@ fig,ax = subplots( len(files), 2, figsize=3*array([ 2.5*2/(0.618), 2.0*len(files
 ax = ax.flatten()
 
 #
-tight_layout(1,2,4)
+tight_layout(pad=1,w_pad=4,h_pad=4)
 
 #
 foo = {}

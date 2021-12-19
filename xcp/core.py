@@ -40,90 +40,7 @@ alert('Metadata dictionary for Ed\'s catalog paper stored to %s'%magenta('"xcp.c
 
 
 #
-def LALPolarizationsFD(approximant, lmlist, m1, m2, s1, s2, delta_f, phiRef=0,nu0 = 0,pflag=501, ReturnCoPrec=1):
-    
-    #
-    import lalsimulation as lalsim
-      
-    lalparams = lal.CreateDict()
-    
-    #
-    output_modes = {}
-    
-    #
-    ModeArray = lalsim.SimInspiralCreateModeArray()
-    for mode in lmlist:
-        
-        #
-        l,m = mode
-        
-        #
-        lalsim.SimInspiralModeArrayActivateMode(ModeArray, l,m)
-        lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
-
-        #
-        lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(lalparams, 0)
-
-        #
-        lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, ReturnCoPrec)
-        
-        #
-        if pflag:
-            lalsim.SimInspiralWaveformParamsInsertPhenomXPrecVersion( lalparams, pflag )
-
-        #
-        f_min       = 10.0
-        f_max       = 2048.0
-        Omega       = 0.
-        inclination = 0 # Chosen so that it doesn't correxpond to a spherical hamonic root
-        distance_Mpc= 100.0
-        distance    = distance_Mpc*1.0e6*lal.PC_SI
-
-        Hp, Hc = lalsim.SimInspiralChooseFDWaveform(m1=lal.MSUN_SI*m1,
-                                                m2=lal.MSUN_SI*m2, 
-                                                S1x=s1[0], S1y=s1[1], S1z=s1[2],
-                                                S2x=s2[0], S2y=s2[1], S2z=s2[2],
-                                                distance=distance, 
-                                                inclination=inclination, 
-                                                LALpars=lalparams,
-                                                phiRef=phiRef, 
-                                                f_ref=f_min,
-                                                deltaF=delta_f,
-                                                f_min=f_min,
-                                                f_max=f_max,
-                                                longAscNodes=Omega,
-                                                eccentricity=0.0,
-                                                meanPerAno=0.0,
-                                                approximant=approximant) 
-
-        #
-        freqs = np.arange(len(Hp.data.data)) * delta_f
-        hp = Hp.data.data
-        hc = Hc.data.data
-        
-        if not ( approximant in (lalsim.IMRPhenomXP,lalsim.IMRPhenomXPHM) ):
-
-            #
-            s = -2
-            spherical_harmonic = sYlm(s,l,m,inclination,phiRef)
-            hp /= spherical_harmonic
-            hc /= spherical_harmonic
-        
-        #
-        Mtot = m1+m2
-        hp = codehf(hp,Mtot,distance_Mpc)
-        hc = codehf(hc,Mtot,distance_Mpc)
-        f  = codef(freqs,Mtot) 
-        
-        #
-        output_modes[l,m] = (hp,hc,f)
-    
-    #
-    return output_modes
-
-
-#
-def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=500, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
+def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -162,6 +79,10 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         if isinstance(l,int) and isinstance(m,int):
             single_mode_requested = True
             lmlist = [ lmlist ]
+    
+    #
+    if pflag is None:
+        error('Precession version flag, or "pflag", must be input. To return PhenomX with default settings, please use pflag=0. To return PhenomXCP please use pflag=500.')
     
     #
     Mtot = 100.0
@@ -258,7 +179,10 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
     lmlist = [ (ell,ell) ]
     
     #
-    def template_together( f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
+    def template_together( f, mu1=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
+        
+        #
+        mu2 = 0
         
         # Calculate PhenomXPHM with the input amplitude deviations
         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
@@ -284,74 +208,34 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
         
         #
         return amplitude,phase_derivative
-    
-    # #
-    # def template_amp( f, mu2=0, nu5=0 ):
         
-    #     # Set phase deviations to zero
-    #     # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
-    #     nu4=0
-    #     nu6=0
-    #     zeta2=0
+    # #
+    # def template_together( f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
         
     #     # Calculate PhenomXPHM with the input amplitude deviations
     #     # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-    #     multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
+    #     try:
+    #         multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+    #     except:
+    #         multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0 )
         
-    #     # Given the complex FD waveform, compute its amplitude
+    #     # 
     #     complex_strain = multipole_dict[ell,ell]
-    #     amplitude = abs(complex_strain)
-        
-    #     #
-    #     return amplitude
-        
-    # #
-    # def template_dphi( f, nu4=0, nu5=0, nu6=0, zeta2=0 ):
-        
-    #     # Set amplitude deviations to zero
-    #     mu2=0
-    #     mu4=0
-        
-    #     # Calculate PhenomXPHM with the input phase deviations
-    #     # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-    #     multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
-        
+            
     #     # Given the complex FD waveform, compute its amplitude
+    #     amplitude = abs(complex_strain)
+    #     # Given the complex FD waveform, compute its phase derivative
     #     complex_strain = multipole_dict[ell,ell]
     #     phase = unwrap( angle(complex_strain) )
     #     phase_derivative = spline_diff(f,phase)
-    #     # Shift such that the min is zero
-    #     phase_derivative -= min( phase_derivative[ (f>0.03)&(f<0.12) ] )
+    #     # Find min phase derivative
+    #     mask = (f>0.03)&(f<0.12)
+    #     min_phase_derivative = min( phase_derivative[ mask ] )
+    #     # Adjust phase derivative 
+    #     phase_derivative -= min_phase_derivative
         
     #     #
-    #     return phase_derivative
-        
-    # #
-    # def make_template_dphi( mu2=0, nu5=0 ):
-        
-    #     #
-    #     def template_dphi( f, nu6=0, nu4=0, zeta2=0 ):
-            
-    #         # Set amplitude deviations to zero
-    #         mu4=0
-            
-    #         # Calculate PhenomXPHM with the input phase deviations
-    #         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-    #         multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu2=mu2, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta2=zeta2 )
-            
-    #         # Given the complex FD waveform, compute its amplitude
-    #         complex_strain = multipole_dict[ell,ell]
-    #         phase = unwrap( angle(complex_strain) )
-    #         phase_derivative = spline_diff(f,phase)
-    #         # Shift such that the min is zero
-    #         phase_derivative -= min( phase_derivative[ (f>0.03)&(f<0.12) ] )
-            
-    #         #
-    #         return phase_derivative
-            
-    #     #
-    #     return template_dphi
-        
+    #     return amplitude,phase_derivative
         
     #
     return template_together # template_amp, make_template_dphi
@@ -566,8 +450,8 @@ def advanced_gmvx_plot( fit_object ):
     #
     num_figs = len(a1_set)*len(theta_set)
     eta_set_figs,set_fig_ax = subplots( len(a1_set), len(theta_set), figsize=5*array([ len(theta_set),len(a1_set) ]) )
-    set_fig_ax = set_fig_ax.flatten();
-    tight_layout(4,4)
+    set_fig_ax = set_fig_ax.flatten()
+    tight_layout(w_pad=4,h_pad=4)
     ax_counter = 0
     
     #
@@ -619,7 +503,7 @@ def advanced_gmvx_plot( fit_object ):
     num_figs = len(a1_set)*len(eta_set)
     theta_set_figs,set_fig_ax = subplots( len(a1_set), len(eta_set), figsize=5*array([ len(eta_set),len(a1_set) ]) )
     set_fig_ax = set_fig_ax.flatten()
-    tight_layout(4,4)
+    tight_layout(w_pad=4,h_pad=4)
     ax_counter = 0
 
     #
@@ -743,50 +627,3 @@ def gwylmo_cpclean( gwylmo, verbose=False, safe_domain_range=None, cp_domain=Non
     # Return answer
     ans = y3
     return ans
-
-
-
-# Given underlying physical parameters, calculate ones useful form modeling
-def parama_party( eta,theta,a1 ):
-    '''
-    PARAMA-PARTY:
-    If L || z and m1>m2 and q=m1/m2, then 
-
-    S2 = 0
-    S1 = m1**2 a1 * exp( 1j * theta ) = Sz + 1j*Sperp
-    X1 = X = S1/m1**2
-
-    chi_eff = m1*a1*cos(theta)/(m1+m2) = a1*cos(theta)*/(1+1.0/q)
-
-    A1 = 2 + (3*m2)/(2*m1)
-    A2 = 2 + (3*m1)/(2*m2)
-    B1 = A1 * a1*sin(theta)
-    B2 = 0
-    chi_p = max( B1,B2 ) / ( A1 * m1*m1 )
-    L = L
-
-    '''
-    
-    #
-    from positive import eta2m1m2
-    from numpy import cos,sin,maximum
-    
-    #
-    m1,m2 = eta2m1m2(eta)
-    
-    #
-    q = m1/m2
-    chi_eff = m1*a1*cos(theta)/(m1+m2)
-    
-    #
-    A1 = 2 + (3.0*m2)/(2.0*m1)
-    Norm_S1_perp = abs(a1*sin(theta)*m1*m1)
-    B1 = A1 * Norm_S1_perp 
-    chi_p = maximum( B1,0 ) / ( A1 * m1*m1 )
-    
-    '''
-    NOTE that the above is basically a1*sin(theta), but we retain the additional steps to illustrate consistency with the more general formula
-    '''
-    
-    #
-    return chi_eff, chi_p
