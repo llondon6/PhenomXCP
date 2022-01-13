@@ -217,7 +217,7 @@ for k in parameter_names_in_order:
                         '\tdouble u = cos(theta);\n' if 'u' in this_model_string else '',
                         '\tdouble u2 = u*u;\n' if 'u*u' in this_model_string else '', 
                         '\tdouble u3 = u2*u;\n' if 'u*u*u' in this_model_string else '', 
-                        '\tdouble u4 = u3*u;\n' if 'u*u*u*u' in this_model_string else '', 
+                        '\tUNUSED double u4 = u3*u;\n' if 'u*u*u*u' in this_model_string else '', 
                         '\tdouble a12 = a1*a1;\n' if 'a1*a1' in this_model_string else '',
                         '\tdouble a13 = a12*a1;\n' if 'a1*a1*a1' in this_model_string else '',
                         '\tdouble eta2 = eta*eta;\n' if 'eta*eta' in this_model_string else '', 
