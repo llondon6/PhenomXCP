@@ -35,7 +35,31 @@ ll = 2
 datadir = '/Users/book/KOALA/PhenomXCP/data/version2/'
 files = glob( datadir+'*_l%im%i.txt'%(ll,ll) )
 files.sort()
-files = files[::-1]
+# files = files[::-1]
+
+#
+file_map = []
+for j,sn_ in enumerate(metadata_dict['simname']):
+
+    # Find index location of this metadata in the list of file paths
+    k = [ k for k,val in enumerate(files) if sn_ in val ][0]
+
+    # 
+    file_map.append(k)
+
+# Sort file paths like matadata so that we can then sort both according to distance between physical parameters
+files = array(files)[file_map]
+    
+reference_index = 0
+# theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z
+mask = [0,3,9] # theta, eta, a1 -- the parameters that will be used to calculate distance for sorting
+coordinates = metadata_dict['array_data'][:,mask]
+coordinates[:,0] = cos(coordinates[:,0]) # use cos theta 
+index_map, sorted_coordinates = distance_sort( coordinates, reference_index, center=not False )
+
+#
+files = list(files[index_map])
+reverse_index_map = argsort( index_map ).astype(int) # array([ int(c) for c in argsort( index_map ) ]),dtype=int
 
 # Get number of parameters to be tuned
 scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),ell=2)
@@ -89,7 +113,7 @@ for j,f_ in enumerate(files):
     # GENERATE TEMPLATE FUNCTIONS
     # ---
     action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,ell=2)
-    def action( p ):
+    def action( p, verbose=False, output_vars=False ):
         #
         amplitude,phase_derivative = action_helper( f, *p )
         # -- Calculate residual of phase derivative -- #
@@ -103,6 +127,8 @@ for j,f_ in enumerate(files):
         # -- Combine residuals ----------------------- #
         combined_residual = residual_phase_derivative + residual_amplitude
         #
+        if output_vars:
+            return (combined_residual,p)
         return combined_residual
     
     # PERFORM FIT
@@ -111,13 +137,24 @@ for j,f_ in enumerate(files):
     # Calculate default model amp and phase derivative
     mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
     
-    # Perform fit
-    foo = minimize( action,zeros(var_count) )
-    best_fit_amp,best_fit_dphi = action_helper( f, *foo.x )
+    # Perform fit 
+    # # NOTE that carrying forward previous solutions as initial guesses causes problems UNLESS the simulations are distance sorted as can be seen above
+    guess = zeros(var_count) if j==0 else foo[1]
+    # foo = minimize( action, guess )
+    # foo = (foo.fun,foo.x)
+    
+    
+    foos, boundary_par = jac_sort_minimize(action,var_count, verbose=True, initial_guess=guess)
+    foo = foos[ -1 ]
+    # foo = foos[ argmin( [ f[0] for f in foos ] ) ]
+    
+    #
+    best_fit_amp,best_fit_dphi = action_helper( f, *foo[1] )
     
     # Store fit params and cov 
-    alert(foo.x,header=True)
-    popt_array[j,:] = foo.x
+    alert(simname,header=True)
+    alert(foo[1],header=False)
+    popt_array[j,:] = foo[1]
     fit_obj_list.append( foo )
     
     # PLOTTING
@@ -159,6 +196,11 @@ file_path = datadir+'waveform_fit_diagnostic_l%im%i.pdf'%(ll,ll)
 alert('Saving batch plot to %s'%magenta(file_path))
 savefig(file_path,pad_inches=2, bbox_inches = "tight")
 alert('Done.')
+
+# #
+# physical_param_array = physical_param_array[ reverse_index_map,: ]
+# popt_array = popt_array[ reverse_index_map,: ]
+# fit_obj_list  = list(array(fit_obj_list)[ reverse_index_map ])
 
 # SAVE FIT DATA
 # --

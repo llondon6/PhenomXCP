@@ -58,7 +58,8 @@ code_string = ['\n\n#\ndef generate_model_params(theta,eta,a1):\n\n',
 for k in parameter_names_in_order:
     
     # Store python code for fit
-    code_string.append( '\t# %s\n'%k )
+    code_string.append( '\t# %s, %i terms\n'%(k,len(foo[k].basis_symbols)) )
+    alert('# %s has %i terms ... '%(k,len(foo[k].basis_symbols)))
 
     #
     this_code_string = foo[k].__str_python__()
@@ -224,7 +225,7 @@ for k in parameter_names_in_order:
                         '\tdouble eta3 = eta2*eta;\n' if 'eta*eta*eta' in this_model_string else '', 
                         '\tdouble delta = sqrt(1-4*eta);\n' if 'delta' in this_model_string else '',
                         '\tdouble delta2 = delta*delta;\n' if 'delta*delta' in this_model_string else '', 
-                        '\tdouble delta3 = delta2*delta;\n' if 'delta2*delta' in this_model_string else '' ,
+                        '\tUNUSED double delta3 = delta2*delta;\n' if 'delta*delta*delta' in this_model_string else '' ,
                         '\tdouble %s;\n'%k,
                         '\n\t// Evaluate fit for this parameter\n\t'
                     ])

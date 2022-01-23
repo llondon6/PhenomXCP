@@ -55,15 +55,34 @@ foo['model_domain'] = model_domain
 '''
 alert('Fitting parameters ...',header=True)
 
+
+# # mu1 
+# # ---
+# key = 'mu1'
+# labels={'python':[key,('u', 'eta', 'delta', 'a1'),''],'latex':['\\'+key,(r'\cos(\theta)', r'\eta', r'\delta', r'a_1'),'']}
+# foo[key] = gmvpfit( model_domain, mu1,fitatol=0.0001,verbose=True,maxdeg_list=[4,3,0,3],center=True,labels=labels,estatol=0.01)
+# alert( 'The fit has '+bold(str(len(foo[key].basis_symbols)))+' terms.', header=True )
+# advanced_gmvx_plot(foo[key]); show()
+
 #
 for key in model_range:
+    
+    #
+    # u_order = 3
+    
+    #
+    maxdeg_list = [4,3,0,3]
+    temper = True
+    if key in ('nu4'):
+        maxdeg_list = [4,0,3,3]
     
     alert('Now fitting %s'%red(key),header=True)
     
     #
     labels={'python':[key,('u', 'eta', 'delta', 'a1'),''],'latex':['\\'+key[:-1]+'_'+key[-1],(r'\cos(\theta)', r'\eta', r'\delta', r'a_1'),'']}
     
-    foo[key] = gmvpfit( model_domain, model_range[key],fitatol=0.0001,verbose=True,maxdeg_list=[4,3,0,3],center=True,estatol=0.010,labels=labels,temper=False)
+    foo[key] = gmvpfit( model_domain, model_range[key],fitatol=0.0001,verbose=True,maxdeg_list=maxdeg_list,center=True,estatol=0.01,labels=labels,temper=temper)
+    alert( 'The fit for %s has '%bold(yellow(key))+bold(yellow(str(len(foo[key].basis_symbols))))+' terms.', header=True )
 
 # # nu4
 # # ---
