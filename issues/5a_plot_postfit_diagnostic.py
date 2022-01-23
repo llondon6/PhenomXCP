@@ -70,7 +70,7 @@ coordinates[:,0] = cos(coordinates[:,0]) # use cos theta
 index_map, sorted_coordinates = distance_sort( coordinates, reference_index, center=not False )
 
 #
-files = list(files[index_map])
+files = list(files[index_map]) 
 
 # Load and unpack physical parameter space
 opt_parameter_range = loadtxt(datadir+'fit_opt_parameters.txt')
