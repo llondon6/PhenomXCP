@@ -103,6 +103,15 @@ for j,f_ in enumerate(files):
     f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
     theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = metadata_dict['array_data'][k]
     
+    dphi_fd -= mean(dphi_fd)
+        
+    # # Compute the phase from the phase derivative
+    # phi_fd = spline_antidiff( f, dphi_fd )
+    # # Compute complex strain
+    # h_fd = amp_fd * exp( 1j * phi_fd )
+    # amp_scale = f ** (7.0/6)
+    # std_h_fd_2 = std(h_fd*amp_scale)**2
+    
     #
     chi1_vec = array([chi1_x,chi1_y,chi1_z])
     chi2_vec = array([chi2_x,chi2_y,chi2_z])
@@ -114,9 +123,23 @@ for j,f_ in enumerate(files):
     # ---
     action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,ell=2)
     def action( p, verbose=False, output_vars=False ):
+        
         #
         amplitude,phase_derivative = action_helper( f, *p )
+        
+        # # -- Compute FD waveforms, time-shift align, and then compute residual -- #
+        # # Compute optimal time shift 
+        # phase_shift = mean( phase_derivative - dphi_fd )
+        # # Compute model phase, shifted accordingly 
+        # phase = phase_derivative - phase_shift 
+        # # Compute complex strain 
+        # complex_strain = amplitude * exp( 1j * phase ) 
+        # #
+        # abs_res = abs(h_fd-complex_strain) * amp_scale
+        # combined_residual = sum(abs_res**2 / std_h_fd_2)
+        
         # -- Calculate residual of phase derivative -- #
+        phase_derivative -= mean(phase_derivative)
         residual_phase_derivative = sum((dphi_fd - phase_derivative)**2) / std(dphi_fd)
         # -- Calculate residual of amplitude --------- #
         amp_scale = f ** (7.0/6)
@@ -126,6 +149,7 @@ for j,f_ in enumerate(files):
         residual_amplitude = sum((log_scaled_amp_fd - log_scaled_amplitude)**2) / std(log_scaled_amp_fd)
         # -- Combine residuals ----------------------- #
         combined_residual = residual_phase_derivative + residual_amplitude
+        
         #
         if output_vars:
             return (combined_residual,p)
@@ -139,13 +163,13 @@ for j,f_ in enumerate(files):
     
     # Perform fit 
     # # NOTE that carrying forward previous solutions as initial guesses causes problems UNLESS the simulations are distance sorted as can be seen above
-    guess = zeros(var_count) if j==0 else foo[1]
-    # foo = minimize( action, guess )
-    # foo = (foo.fun,foo.x)
+    guess = zeros(var_count) #if j==0 else foo[1]
+    foo = minimize( action, guess )
+    foo = (foo.fun,foo.x)
     
     
-    foos, boundary_par = jac_sort_minimize(action,var_count, verbose=True, initial_guess=guess)
-    foo = foos[ -1 ]
+    # foos, boundary_par = jac_sort_minimize(action,var_count, verbose=True, initial_guess=guess)
+    # foo = foos[ -1 ]
     # foo = foos[ argmin( [ f[0] for f in foos ] ) ]
     
     #
@@ -162,6 +186,7 @@ for j,f_ in enumerate(files):
     
     #
     sca(ax[p]); p+=1
+    dphi_fd -= mean(dphi_fd)
     plot( f, dphi_fd, label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
     plot( f, mod_xhm0_dphi, label='PhenomX(0)', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
     plot( f, best_fit_dphi, label='Best Fit', color='r', ls='-' )
@@ -210,10 +235,14 @@ data_path = datadir+'fit_initial_binary_parameters.txt'
 alert('Saving %s to %s'%( magenta('physical_param_array'), magenta(data_path)) )
 savetxt( data_path, physical_param_array, header='see "issues/3a_collect_metadata.py"; columns are theta, m1, m2, eta, delta, chi_eff, chi_p, chi1, chi2, a1, a2, chi1_L_x, chi1_L_y, chi1_L_z, chi2_L_x, chi2_L_y, chi2_L_z' )
 
+# Get parameter names in order to use for the next file header
+scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),ell=2)
+parameter_names_in_order = scarecrow.__code__.co_varnames[1:scarecrow.__code__.co_argcount]
+
 # Fit parameters
 data_path = datadir+'fit_opt_parameters.txt'
 alert('Saving %s to %s'%( magenta('dphi_popt_array'), magenta(data_path)) )
-savetxt( data_path, popt_array, header='see "template_together()" in core.py; columns are mu1, mu2, mu3, nu4, nu5, nu6, zeta1, zeta2' )
+savetxt( data_path, popt_array, header='see "template_together()" in core.py; columns are %s'%(' '.join(parameter_names_in_order)) )
 
 #
 data_path = datadir+'fit_objects.pickle'

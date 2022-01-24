@@ -73,6 +73,7 @@ index_map, sorted_coordinates = distance_sort( coordinates, reference_index, cen
 files = list(files[index_map]) 
 
 # Load and unpack physical parameter space
+# NOTE that the order of these parameters must be the same as that in files
 opt_parameter_range = loadtxt(datadir+'fit_opt_parameters.txt')
 scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),ell=2)
 parameter_names_in_order = scarecrow.__code__.co_varnames[1:scarecrow.__code__.co_argcount]
@@ -129,7 +130,8 @@ for j,f_ in enumerate(files):
     mod_xhm_amp = abs(mod_xhm)
     mod_xhm_phi = unwrap( angle(mod_xhm) )
     mod_xhm_dphi = spline_diff(f,mod_xhm_phi)
-    mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03)&(f<0.12) ] )
+    # mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03)&(f<0.12) ] )
+    mod_xhm_dphi -= mean( mod_xhm_dphi )
     
     #
     tuned_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=500 )
@@ -137,7 +139,8 @@ for j,f_ in enumerate(files):
     tuned_xhm_amp = abs(tuned_xhm)
     tuned_xhm_phi = unwrap( angle(tuned_xhm) )
     tuned_xhm_dphi = spline_diff(f,tuned_xhm_phi)
-    tuned_xhm_dphi -= min( tuned_xhm_dphi[ (f>0.03)&(f<0.12) ] )
+    # tuned_xhm_dphi -= min( tuned_xhm_dphi[ (f>0.03)&(f<0.12) ] )
+    tuned_xhm_dphi -= mean( tuned_xhm_dphi )
 
     # PLOTTING
     # ---

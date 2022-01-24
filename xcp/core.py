@@ -172,7 +172,7 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
     
     #
     import xcp
-    from numpy import unwrap,angle 
+    from numpy import unwrap,angle,mean
     from positive import spline_diff
     
     #
@@ -199,12 +199,13 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
         # Given the complex FD waveform, compute its phase derivative
         complex_strain = multipole_dict[ell,ell]
         phase = unwrap( angle(complex_strain) )
-        phase_derivative = spline_diff(f,phase)
+        phase_derivative = spline_diff(f,phase,k=5)
         # Find min phase derivative
         mask = (f>0.03)&(f<0.12)
         min_phase_derivative = min( phase_derivative[ mask ] )
         # Adjust phase derivative 
-        phase_derivative -= min_phase_derivative
+        # phase_derivative -= min_phase_derivative
+        phase_derivative -= mean(phase_derivative)
         
         #
         return amplitude,phase_derivative
@@ -471,7 +472,7 @@ def advanced_gmvx_plot( fit_object ):
             _u = cos(_theta) 
 
             #
-            case_eta   = linspace( min(_eta),max(_eta),1000 ) 
+            case_eta   = linspace( min(_eta)*0.6,max(_eta),1000 ) 
             case_delta = eta2delta( case_eta )
             case_q     = 1.0/eta2q(case_eta)  
             case_theta = _theta * ones_like(case_eta)
@@ -520,7 +521,8 @@ def advanced_gmvx_plot( fit_object ):
             _u = cos(_theta) 
 
             #
-            case_theta   = linspace( min(_theta),max(_theta),1000 ) # 
+            # case_theta   = linspace( min(_theta),max(_theta),1000 ) # 
+            case_theta   = linspace( 0,pi,1500 ) # 
             case_u     = cos(case_theta)
             case_eta   = _eta * ones_like(case_theta)
             case_delta = eta2delta( case_eta )
