@@ -40,7 +40,7 @@ for key in fit_object:
     fit_object[key].labels={'python':[key,('u', 'eta', 'delta', 'a1'),''],'latex':['\\'+key,(r'\cos(\theta)', r'\eta', r'\delta', r'a_1'),'']}
     
     # Generate diagnostic figures
-    summary_fig,eta_set_fig,theta_set_fig = advanced_gmvx_plot( fit_object[key] )
+    summary_fig,eta_set_fig,theta_set_fig,a1_set_fig = advanced_gmvx_plot( fit_object[key] )
             
     # Save summary figure
     figure_path = datadir + key+'_fit_diagnostic_1_summary.pdf'
@@ -56,6 +56,11 @@ for key in fit_object:
     figure_path = datadir + key+'_fit_diagnostic_3_theta_sets.pdf'
     alert('Saving diagnostic plot to %s'%magenta(figure_path))
     theta_set_fig.savefig( figure_path, pad_inches=0, bbox_inches = 'tight' )
+    
+    # Save a1 space figure
+    figure_path = datadir + key+'_fit_diagnostic_4_a1_sets.pdf'
+    alert('Saving diagnostic plot to %s'%magenta(figure_path))
+    a1_set_fig.savefig( figure_path, pad_inches=0, bbox_inches = 'tight' )
     
     close('all')
 

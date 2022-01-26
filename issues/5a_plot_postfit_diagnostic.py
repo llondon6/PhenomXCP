@@ -115,6 +115,7 @@ for j,f_ in enumerate(files):
     chi1_vec = array([chi1_x,chi1_y,chi1_z])
     chi2_vec = array([chi2_x,chi2_y,chi2_z])
     #dphi_fd -= min( dphi_fd[ (f>0.03)&(f<0.12) ] )
+    dphi_fd -= mean( dphi_fd )
     
     #
     action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,ell=2)

@@ -547,8 +547,52 @@ def advanced_gmvx_plot( fit_object ):
             xlabel(r'$\cos(\theta)$')
             ylabel(r'$\%s$'%fit_object.labels['python'][0])
             
+    #    
+    num_figs = len(theta_set)*len(eta_set)
+    a1_set_figs,set_fig_ax = subplots( len(theta_set), len(eta_set), figsize=5*array([ len(eta_set),len(theta_set) ]) )
+    set_fig_ax = set_fig_ax.flatten()
+    tight_layout(w_pad=4,h_pad=4)
+    ax_counter = 0
+
     #
-    return summary_fig, eta_set_figs, theta_set_figs
+    for k,_theta in enumerate(theta_set):
+        for _eta in eta_set:
+
+            #
+            eta_mask = (_eta==eta_point)
+            theta_mask = (_theta==theta_point)
+            mask = theta_mask & eta_mask
+
+            #
+            _a1 = a1_point[mask]
+
+            #
+            case_a1   = linspace( 0,1,100 ) # 
+            case_u     = cos(_theta) * ones_like(case_a1) # cos(case_theta)
+            case_eta   = _eta * ones_like(case_a1)
+            case_delta = eta2delta( case_eta )
+
+            #
+            case_domain = array([case_u,case_eta,case_delta,case_a1]).T
+            case_range = fit_object.eval(case_domain)
+            opt_range  = fit_object.eval(fit_object.domain[mask,:])
+
+            #
+            # sca(ax[0])
+            # ax[0].plot3D( case_u, case_eta, case_range, lw=1, alpha=1, color='k', ls='--' ) # colors[k]
+            # ax[0].plot3D( case_u, case_eta, case_range, lw=1, alpha=1, color = 'tab:blue' if _a1==a1_set[0] else 'red' )
+            
+            #
+            sca( set_fig_ax[ax_counter] ); ax_counter += 1
+            plot( a1[mask], fit_object.range[mask] if hasattr(fit_object,'range') else fit_object.scalar_range[mask], marker='o',ls='none',color='r'  )
+            plot( a1[mask], opt_range, marker='o',ms=10,mfc='none', color='b',ls='none'  )
+            plot( case_a1, case_range, ls='-', color='b' )
+            title( r'$\theta_{\mathrm{LS}}=%1.0f$, $q=%1.2f$'%(_theta*180.0/pi,eta2q(_eta)) )
+            xlabel(r'$a_1$')
+            ylabel(r'$\%s$'%fit_object.labels['python'][0])
+            
+    #
+    return summary_fig, eta_set_figs, theta_set_figs, a1_set_figs
  
 
 # Remove non l=m moments and symmetrize in co-precessing frame
