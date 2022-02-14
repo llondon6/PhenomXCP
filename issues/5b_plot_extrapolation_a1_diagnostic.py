@@ -13,6 +13,9 @@ from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict,
 #
 ll = 2
 
+#
+pflag=500
+
 # --------------------------------------- #
 # Preliminaries
 # --------------------------------------- #
@@ -119,7 +122,7 @@ for j,f_ in enumerate(files):
 
         #
         #print(m1,m2,a1,chi1_vec,chi2_vec)
-        mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=501 )
+        mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0 )
         mod_xhm = mod_xhm_dict[ll,ll]
         mod_xhm_amp = abs(mod_xhm)
         mod_xhm_phi = unwrap( angle(mod_xhm) )
@@ -128,7 +131,7 @@ for j,f_ in enumerate(files):
         mod_xhm_dphi -= mean( mod_xhm_dphi )
 
         #
-        tuned_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=500 )
+        tuned_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=pflag )
         tuned_xhm = tuned_xhm_dict[ll,ll]
         tuned_xhm_amp = abs(tuned_xhm)
         tuned_xhm_phi = unwrap( angle(tuned_xhm) )
@@ -182,7 +185,7 @@ for j,f_ in enumerate(files):
             extrap_chi1_vec = ex_a1 * chi1_vec / linalg.norm(chi1_vec)
             # if pp==0: 
             #     print(m1,m2,ex_a1,extrap_chi1_vec,chi2_vec)
-            extrap_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, extrap_chi1_vec, chi2_vec, pflag=500 )
+            extrap_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, extrap_chi1_vec, chi2_vec, pflag=pflag )
             extrap_xhm = extrap_xhm_dict[ll,ll]
             extrap_xhm_amp = abs(extrap_xhm)
             extrap_xhm_phi = unwrap( angle(extrap_xhm) )

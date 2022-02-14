@@ -83,7 +83,7 @@ for f_ in files[::-1]:
     mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
     
     #
-    mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=501 )
+    mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=501, fsflag=None )
     mod_xhm = mod_xhm_dict[ll,ll]
     mod_xhm_amp = abs(mod_xhm)
     mod_xhm_phi = unwrap( angle(mod_xhm) )
@@ -110,7 +110,7 @@ for f_ in files[::-1]:
     sca(ax[p]); p+=1
     plot( f, amp_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
     plot( f, mod_xhm_amp, label='PhenomXP(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
-    plot( f, mod_xhm0_amp, label='PhenomXP(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+    plot( f, mod_xhm0_amp, label='PhenomX(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
     yscale('log')
     xscale('log')
     legend(ncol=2)

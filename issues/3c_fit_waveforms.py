@@ -121,6 +121,7 @@ for j,f_ in enumerate(files):
     
     # GENERATE TEMPLATE FUNCTIONS
     # ---
+    # Generate PhenomX (not PhenomXP) waveform generators that allow for model deviations
     action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,ell=2)
     def action( p, verbose=False, output_vars=False ):
         

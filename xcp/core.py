@@ -40,7 +40,7 @@ alert('Metadata dictionary for Ed\'s catalog paper stored to %s'%magenta('"xcp.c
 
 
 #
-def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
+def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=None, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -120,6 +120,10 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         # Tell the model to return the coprecessing mode -- only works on our development branches
         lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, 1)
         
+        # Make sure that non-precessing spin is used!
+        if not (fsflag is None):
+            lalsim.SimInspiralWaveformParamsInsertPhenomXPFinalSpinMod( lalparams, 500 )
+        
         #
         
         # Set deviations from base model based on inputs
@@ -186,10 +190,11 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
         
         # Calculate PhenomXPHM with the input amplitude deviations
         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
+        # NOTE that fsflag=500 means that we use the final mass and spin associated with PhenomX not XP
         try:
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2, fsflag=500 )
         except:
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0 )
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, fsflag=500 )
         
         # 
         complex_strain = multipole_dict[ell,ell]
@@ -584,9 +589,9 @@ def advanced_gmvx_plot( fit_object ):
             
             #
             sca( set_fig_ax[ax_counter] ); ax_counter += 1
-            plot( a1[mask], fit_object.range[mask] if hasattr(fit_object,'range') else fit_object.scalar_range[mask], marker='o',ls='none',color='r'  )
-            plot( a1[mask], opt_range, marker='o',ms=10,mfc='none', color='b',ls='none'  )
-            plot( case_a1, case_range, ls='-', color='b' )
+            plot( a1[mask], fit_object.range[mask] if hasattr(fit_object,'range') else fit_object.scalar_range[mask], marker='o',ls='none',color='k'  )
+            plot( a1[mask], opt_range, marker='o',ms=10,mfc='none', color='forestgreen',ls='none'  )
+            plot( case_a1, case_range, ls='-', color='forestgreen' )
             title( r'$\theta_{\mathrm{LS}}=%1.0f$, $q=%1.2f$'%(_theta*180.0/pi,eta2q(_eta)) )
             xlabel(r'$a_1$')
             ylabel(r'$\%s$'%fit_object.labels['python'][0])
