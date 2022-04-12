@@ -185,9 +185,13 @@ for j,f_ in enumerate(files):
     # PLOTTING
     # ---
     
+    # align by requiring zero mean
+    dphi_fd -= mean(dphi_fd)
+    best_fit_dphi -= mean(best_fit_dphi)
+    mod_xhm0_dphi -= mean(mod_xhm0_dphi)
+    
     #
     sca(ax[p]); p+=1
-    dphi_fd -= mean(dphi_fd)
     plot( f, dphi_fd, label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
     plot( f, mod_xhm0_dphi, label='PhenomX(0)', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
     plot( f, best_fit_dphi, label='Best Fit', color='r', ls='-' )

@@ -57,7 +57,7 @@ parameter_names_in_order = scarecrow.__code__.co_varnames[1:scarecrow.__code__.c
 model_range = {  parameter_names_in_order[k]:var for k,var in enumerate(opt_parameter_range.T) }
 
 #
-num_subplots = 4 * 5 
+num_subplots = 4 * 4
 fig,ax = subplots( num_subplots, 2, figsize=0.9*3*array([ 2.5*2/(0.618), 1.5*2*num_subplots ]) )
 # fig,ax = subplots( 1, 2, figsize=3*array([ 2.5*2/(0.618), 1.5*2 ]) )
 # fig,ax = subplots( num_subplots, 2, figsize=3*array([ 2.5*2/(0.618), 1.5*num_subplots ]) )
@@ -104,7 +104,7 @@ for j,f_ in enumerate(files):
     degree_ = int(round( (theta*180/pi)/10 )*10)
     q_  = round(eta2q(eta),2)
     a1_ = around(a1,2)
-    state = (a1_,degree_)
+    state = (a1_,q_)
     if not ( state in passed_state ): # 'q4a08t150' in simname:
         
         #
@@ -174,37 +174,37 @@ for j,f_ in enumerate(files):
         
         
         
-        #
-        extrap_eta = linspace(q2eta(20),q2eta(6),18)[::-1]
-        # print(extrap_eta)
-        # extrap_a1 = array(sort(list((linspace(0,1,5)))+[a1]))
-        clr = rgb(len(extrap_eta),jet=True,reverse=True)
-        for pp,ex_eta in enumerate(extrap_eta):
-            #
-            m1,m2 = eta2m1m2( ex_eta )
-            # if pp==0: 
-            #     print(m1,m2,ex_a1,extrap_chi1_vec,chi2_vec)
-            extrap_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=500 )
-            extrap_xhm = extrap_xhm_dict[ll,ll]
-            extrap_xhm_amp = abs(extrap_xhm)
-            extrap_xhm_phi = unwrap( angle(extrap_xhm) )
-            extrap_xhm_dphi = spline_diff(f,extrap_xhm_phi)
-            extrap_xhm_dphi -= mean(extrap_xhm_dphi)
-            is_extrapolated = ex_eta < q2eta(8.0)
-            if is_extrapolated:
-                alpha = 1
-                lw=2
-                c = clr[pp]
-            else:
-                alpha = 0.25
-                lw=1
-                c = 'm'
-            sca(ax[p-2])
-            plot( f, extrap_xhm_dphi, label='q=%1.2f'%eta2q(ex_eta) if is_extrapolated else None, ls='-',lw=lw,alpha=alpha, c=c )
-            legend(ncol=2)
-            sca(ax[p-1])
-            plot( f, extrap_xhm_amp, label='q=%1.2f'%eta2q(ex_eta) if is_extrapolated else None, ls='-',lw=lw,alpha=alpha, c=c )
-            legend(ncol=2)
+        # #
+        # extrap_theta = cos( linspace() )
+        # # print(extrap_theta)
+        # # extrap_a1 = array(sort(list((linspace(0,1,5)))+[a1]))
+        # clr = rgb(len(extrap_theta),jet=True,reverse=True)
+        # for pp,ex_eta in enumerate(extrap_theta):
+        #     #
+        #     m1,m2 = eta2m1m2( ex_eta )
+        #     # if pp==0: 
+        #     #     print(m1,m2,ex_a1,extrap_chi1_vec,chi2_vec)
+        #     extrap_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=500 )
+        #     extrap_xhm = extrap_xhm_dict[ll,ll]
+        #     extrap_xhm_amp = abs(extrap_xhm)
+        #     extrap_xhm_phi = unwrap( angle(extrap_xhm) )
+        #     extrap_xhm_dphi = spline_diff(f,extrap_xhm_phi)
+        #     extrap_xhm_dphi -= mean(extrap_xhm_dphi)
+        #     is_extrapolated = ex_eta < q2eta(8.0)
+        #     if is_extrapolated:
+        #         alpha = 1
+        #         lw=2
+        #         c = clr[pp]
+        #     else:
+        #         alpha = 0.25
+        #         lw=1
+        #         c = 'm'
+        #     sca(ax[p-2])
+        #     plot( f, extrap_xhm_dphi, label='q=%1.2f'%eta2q(ex_eta) if is_extrapolated else None, ls='-',lw=lw,alpha=alpha, c=c )
+        #     legend(ncol=2)
+        #     sca(ax[p-1])
+        #     plot( f, extrap_xhm_amp, label='q=%1.2f'%eta2q(ex_eta) if is_extrapolated else None, ls='-',lw=lw,alpha=alpha, c=c )
+        #     legend(ncol=2)
             
         
         

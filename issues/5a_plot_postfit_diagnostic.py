@@ -145,6 +145,12 @@ for j,f_ in enumerate(files):
 
     # PLOTTING
     # ---
+    
+    
+    dphi_fd -= mean(dphi_fd)
+    opt_dphi -= mean(opt_dphi)
+    tuned_xhm_dphi -= mean(tuned_xhm_dphi)
+    mod_xhm0_dphi -= mean(mod_xhm0_dphi)
 
     #
     sca(ax[p]); p+=1

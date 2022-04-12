@@ -39,8 +39,61 @@ with open(catalog_paper_md_path, 'r') as f:
 alert('Metadata dictionary for Ed\'s catalog paper stored to %s'%magenta('"xcp.catalog_paper_metadata"'),fname='xcp.core')
 
 
+def get_xphm_coprec(ell, emm, Mtotal, q, chi1, chi2, pnr=False):
+    
+    #
+    import lal 
+    import lalsimulation as lalsim 
+    import numpy as np
+
+    m1 = Mtotal * q / (1.0 + q)
+    m2 = Mtotal / (1.0 + q)
+
+    # generate co-precessing waveform
+    lalparams = lal.CreateDict( )
+    lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(lalparams, 0)
+    
+    lalsim.SimInspiralWaveformParamsInsertPhenomXPHMPrecModes(lalparams, 1)
+    
+    if pnr:
+        lalsim.SimInspiralWaveformParamsInsertPhenomXPrecVersion(lalparams, 500)
+    
+    #
+    ModeArray = lalsim.SimInspiralCreateModeArray()
+    lalsim.SimInspiralModeArrayActivateMode(ModeArray, ell,emm)
+    lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
+
+    distance = 1e6*lal.PC_SI 
+    phiRef = 0.0 
+    inclination = 0.0
+
+    delta_F=0.125 
+    f_lower=20.
+    fRef=20.
+    f_max = 2**(int(np.log(3000./delta_F)/np.log(2))+1) * delta_F
+
+    hlmpos, hlmneg = lalsim.SimIMRPhenomXPHMOneMode(    
+        ell,
+        emm,
+        lal.MSUN_SI*m1,
+        lal.MSUN_SI*m2, 
+        chi1[0],chi1[1],chi1[2],
+        chi2[0],chi2[1],chi2[2],                                                  
+        distance,
+        inclination,
+        phiRef,
+        delta_F,
+        f_lower,
+        f_max,
+        fRef,
+        lalparams)
+
+    freqs = np.arange(len(hlmpos.data.data)) * delta_F
+
+    return freqs, hlmpos.data.data, hlmneg.data.data
+
 #
-def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=None, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
+def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=None, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0,__set_XPHMThresholdMband__=True ):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -65,6 +118,8 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
     import lal
     
     #
+    if len(lmlist)>1:
+        error('this function only works with one mode input! otherwise there is an issue')
     
     # Validate inputs 
     # ---
@@ -104,18 +159,20 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
     output_modes = {}
     
     #
-    ModeArray = lalsim.SimInspiralCreateModeArray()
     for lm in lmlist:
         
         #
         l,m = lm
         
         #
+        ModeArray = lalsim.SimInspiralCreateModeArray()
         lalsim.SimInspiralModeArrayActivateMode(ModeArray, l,m)
         lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
 
         # Turn off multibanding
         lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(lalparams, 0)
+        if __set_XPHMThresholdMband__:
+            lalsim.SimInspiralWaveformParamsInsertPhenomXPHMThresholdMband(lalparams, 0)
 
         # Tell the model to return the coprecessing mode -- only works on our development branches
         lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, 1)
@@ -170,7 +227,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
 
 
 #
-def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
+def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2,**kwargs):
     
     # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
     
@@ -188,13 +245,13 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
         #
         mu2 = 0
         
-        # Calculate PhenomXPHM with the input amplitude deviations
+        # Calculate PhenomXPHM with the input deviations
         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-        # NOTE that fsflag=500 means that we use the final mass and spin associated with PhenomX not XP
+        # NOTE that fsflag=500 means that we use the final mass and spin associated with PhenomXAS not XP. Realted points are that fsflag=500 is automatically triggered when pflag-500, but the HMs should use a precessing final spin if their RD frequencies are being shifted via Eleanor's formula. 
         try:
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2, fsflag=500 )
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2, fsflag=500,**kwargs )
         except:
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, fsflag=500 )
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, fsflag=500,**kwargs )
         
         # 
         complex_strain = multipole_dict[ell,ell]
@@ -205,12 +262,19 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2):
         complex_strain = multipole_dict[ell,ell]
         phase = unwrap( angle(complex_strain) )
         phase_derivative = spline_diff(f,phase,k=5)
+        
         # Find min phase derivative
         mask = (f>0.03)&(f<0.12)
         min_phase_derivative = min( phase_derivative[ mask ] )
         # Adjust phase derivative 
-        # phase_derivative -= min_phase_derivative
-        phase_derivative -= mean(phase_derivative)
+        phase_derivative -= min_phase_derivative
+        
+        # # Find min phase derivative
+        # mask = (f>0.03)&(f<0.12)
+        # min_phase_derivative = min( phase_derivative[ mask ] )
+        # # Adjust phase derivative 
+        # # phase_derivative -= min_phase_derivative
+        # phase_derivative -= mean(phase_derivative)
         
         #
         return amplitude,phase_derivative
