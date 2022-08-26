@@ -2,7 +2,7 @@
 
 #
 import pickle
-from positive import alert, magenta, parent, red
+from positive import alert, magenta, parent, red, smart_object, blue
 from numpy import loadtxt, load
 from os.path import exists
 import xcp
@@ -17,6 +17,11 @@ import sys
 PYTHON3 = True
 if sys.version_info[0] < 3:
     PYTHON3 = False
+
+#
+config_path = package_dir + 'xcp/global_config.ini'
+global_config = gc = smart_object( config_path, verbose=True )
+gc.lmlist = eval(','.join(gc.lmlist))
 
 # Always load catalog list for calibration runs 
 calibration_catalog_path = data_dir+'calibration_catalog.pickle'
@@ -37,6 +42,9 @@ catalog_paper_md_path = data_dir+'catalog_paper_metadata.json'
 with open(catalog_paper_md_path, 'r') as f:
     catalog_paper_metadata = json.load(f)
 alert('Metadata dictionary for Ed\'s catalog paper stored to %s'%magenta('"xcp.catalog_paper_metadata"'),fname='xcp.core')
+
+#
+alert('According to the global config, the XCP package is configured to model the %s coprecessing moment multipole moment(s)'%magenta(str(gc.lmlist)),fname='xcp.core')
 
 
 def get_xphm_coprec(ell, emm, Mtotal, q, chi1, chi2, pnr=False):
@@ -93,7 +101,7 @@ def get_xphm_coprec(ell, emm, Mtotal, q, chi1, chi2, pnr=False):
     return freqs, hlmpos.data.data, hlmneg.data.data
 
 #
-def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=None, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0,__set_XPHMThresholdMband__=True ):
+def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=0, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0,__set_XPHMThresholdMband__=True, option_shorthand=None ):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -108,18 +116,86 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
     ELSE IF lmlist is single list of ell and m, e.g. (2,2) or [2,2], 
     THEN a single array, i.e. [freq, hplus, hcross], is returned.
     * pflag=500 is the default PhenomXPNR framework
+    
+    We will want this function to do three things:
+    
+    1. Output PhenomXPHM for comparisons
+    2. Output PhenomXHM/AS with/without deviations for calibration and comparison 
+    3. Output PhenomXCP/PNR 
+    
+    
+    
     '''
     
     # Import usefuls 
     from numpy import ndarray, array, arange, double
     from positive.units import codef,codeh,codehf,physf
-    from positive import sYlm
+    from positive import sYlm, error,warning
     import lalsimulation as lalsim
     import lal
     
     #
+    #
     if len(lmlist)>1:
         error('this function only works with one mode input! otherwise there is an issue')
+    #
+    lm = lmlist[0]
+    ll,mm = lm
+            
+    #
+    option_shorthand_strings =  ('1-pnr','2-xphm','3-xphm-ezh','4-xhm')
+    
+    #
+    if option_shorthand:
+        
+        #
+        if isinstance(option_shorthand,str):
+            option_shorthand = option_shorthand.lower()
+        else:
+            error('option shorthand key value must be string')
+        #
+        if not (option_shorthand in option_shorthand_strings):
+            error('option shorthand key value should be in %s'%magenta(option_shorthand_strings))
+            
+        #
+        # alert('Valid option-shorthand input found. We will now overwrite Phenom-X options according to %s'%option_shorthand)
+        
+        if   option_shorthand == '1-pnr':
+            
+            #
+            pflag = 500 # Use XCP which is XAS or XHM with select deviations in model parameters
+            fsflag = 0 # Use default behavior for XPHM
+            
+        elif option_shorthand == '2-xphm':
+            
+            #
+            pflag = 0 # Use default PhenomXPHM behavior
+            fsflag = 0 # Use default behavior for XPHM
+            
+        elif option_shorthand == '3-xphm-ezh':
+            
+            #
+            pflag = 501 if ll==2 else 500 # Use EZH's effective ringdown frequency for dominant multipole moments
+            fsflag = 0 # Use default behavior for XPHM
+            # alert('(l,m) = (%i,%i), pflag = %i'%(ll,mm,pflag))
+            
+        elif option_shorthand == '4-xhm':
+            
+            # NOTE see use of fsflag in LALSimIMRPhenomX_precession.c
+            fsflag = 5 # Tells XP interface to use non-spinning fit for remnant BH
+            pflag = 0 # Use default PhenomXPHM behavior
+            # alert('(l,m) = (%i,%i), pflag = %i, fsflag = %i'%(ll,mm,pflag,fsflag))
+            
+        else:
+            
+            #
+            error('unhandled option shorthand')
+            
+    else:
+        
+        error('It is very unwise to not use this functions option_shorthand keyword input. NOTE that this can be done through template_amp_phase\'s kwargs interface')
+        
+    # alert('option_shorthand = %s'%option_shorthand)
     
     # Validate inputs 
     # ---
@@ -135,9 +211,9 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
             single_mode_requested = True
             lmlist = [ lmlist ]
     
-    #
-    if pflag is None:
-        error('Precession version flag, or "pflag", must be input. To return PhenomX with default settings, please use pflag=0. To return PhenomXCP please use pflag=500.')
+    # #
+    # if pflag is None:
+    #     error('Precession version flag, or "pflag", must be input. To return PhenomX with default settings, please use pflag=0. To return PhenomXCP please use pflag=500.')
     
     #
     Mtot = 100.0
@@ -164,7 +240,10 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         #
         l,m = lm
         
+        # alert('(l,m) = (%i,%i), pflag = %i, fsflag = %i'%(l,m,pflag,fsflag))
+        
         #
+        lalparams = lal.CreateDict()
         ModeArray = lalsim.SimInspiralCreateModeArray()
         lalsim.SimInspiralModeArrayActivateMode(ModeArray, l,m)
         lalsim.SimInspiralWaveformParamsInsertModeArray(lalparams, ModeArray)
@@ -177,27 +256,47 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         # Tell the model to return the coprecessing mode -- only works on our development branches
         lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, 1)
         
-        # Make sure that non-precessing spin is used!
-        if not (fsflag is None):
-            lalsim.SimInspiralWaveformParamsInsertPhenomXPFinalSpinMod( lalparams, 500 )
-        
         #
         
         # Set deviations from base model based on inputs
         # mu2,mu3,mu4,nu4,nu5,nu6,zeta2 = [ double(k) for k in (mu2,mu3,mu4,nu4,nu5,nu6,zeta2) ]
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU1(lalparams, mu1)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2(lalparams, mu2)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU3(lalparams, mu3)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU4(lalparams, mu4)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU4(lalparams, nu4)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU5(lalparams, nu5)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU6(lalparams, nu6)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA1(lalparams, zeta1)
-        lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA2(lalparams, zeta2)
+        # print('3>> ',*(mu1, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2),'\n')
+        if (l,m) == (2,2):
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU1(lalparams, mu1)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2(lalparams, mu2)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU3(lalparams, mu3)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU4(lalparams, mu4)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU4(lalparams, nu4)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU5(lalparams, nu5)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU6(lalparams, nu6)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA1(lalparams, zeta1)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA2(lalparams, zeta2)
+        elif (l,m) == (3,3):
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU1l3m3(lalparams, mu1)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2l3m3(lalparams, mu2)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU3l3m3(lalparams, mu3)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU4l3m3(lalparams, mu4)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU4l3m3(lalparams, nu4)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU5l3m3(lalparams, nu5)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU6l3m3(lalparams, nu6)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA1l3m3(lalparams, zeta1)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA2l3m3(lalparams, zeta2)
+        else:
+            error('(%i,%i) unhandled for deviations relative to PhenomXHM'%(l,m))
         
         #
+        '''
+        The default value in this function is pflag=0 (see function def above). This value does not equate to True, so the true default behavior is set in LALSuite; i.e. the LAL code sets its own default value for the pflag which is 300 (see LALSimInspiralWaveformParams.c at DEFINE_ISDEFAULT_FUNC(PhenomXPrecVersion, INT4, "PrecVersion", 300). NOTE that pflag is then set to a new default value of 223 in LALSimIMRPhenomX_precession.c.   )
+        '''
         if pflag:
             lalsim.SimInspiralWaveformParamsInsertPhenomXPrecVersion( lalparams, pflag )
+        #     alert('pflag is effectively True and set to %i'%pflag)
+        # else:
+        #     alert('pflag is to the effect of False, so pflag will simply not be set in the lasagna (aka laldict)')
+        
+        '''Only set the final spin flag is the user desires a non-trivial value'''
+        if fsflag:
+            lalsim.SimInspiralWaveformParamsInsertPhenomXPFinalSpinMod( lalparams, fsflag )
 
         #
         distance_Mpc= 100.0
@@ -227,17 +326,18 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
 
 
 #
-def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2,**kwargs):
+def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),**kwargs):
     
     # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
     
     #
     import xcp
     from numpy import unwrap,angle,mean
-    from positive import spline_diff
+    from positive import spline_diff,warning
     
     #
-    lmlist = [ (ell,ell) ]
+    ell,emm = lm
+    lmlist = [ (ell,emm) ]
     
     #
     def template_together( f, mu1=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
@@ -246,12 +346,13 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2,**kwargs):
         mu2 = 0
         
         # Calculate PhenomXPHM with the input deviations
-        # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-        # NOTE that fsflag=500 means that we use the final mass and spin associated with PhenomXAS not XP. Realted points are that fsflag=500 is automatically triggered when pflag-500, but the HMs should use a precessing final spin if their RD frequencies are being shifted via Eleanor's formula. 
+        # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model. NOTE that we try and except here becuase sometimes the optimization routines can stray outside of the accepted model domain thus causing LAL to throw an error
         try:
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2, fsflag=500,**kwargs )
+            # print('2>> ',*(mu1, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2))
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
         except:
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, fsflag=500,**kwargs )
+            warning('Something went wrong with the standard evaluation:')
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0,**kwargs )
         
         # 
         complex_strain = multipole_dict[ell,ell]
@@ -264,7 +365,7 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, ell=2,**kwargs):
         phase_derivative = spline_diff(f,phase,k=5)
         
         # Find min phase derivative
-        mask = (f>0.03)&(f<0.12)
+        mask = (f>0.03*ell/2)&(f<0.12*ell/2)
         min_phase_derivative = min( phase_derivative[ mask ] )
         # Adjust phase derivative 
         phase_derivative -= min_phase_derivative
@@ -353,7 +454,7 @@ def determine_data_fitting_region_legacy( data, fmin=0.03, fmax=0.12 ):
 
 
 # Function to determine version2 data fitting region
-def determine_data_fitting_region(data, threshold=0.015):
+def determine_data_fitting_region(data, threshold=0.015, lm=(2,2), plot=False, simname=None ):
     '''
     Given version2 data array, determine fitting region dynamically.
     This function assumes clean data within the default or input values of fmin and fmax, and then uses the phase derivate to determine new fmin and fmax values that are ultimately used to define a fitting region.
@@ -362,10 +463,14 @@ def determine_data_fitting_region(data, threshold=0.015):
     # Import usefuls
     from numpy import argmin, log, arange
     from positive import smooth, find, lim, smoothest_part_by_threshold,findpeaks
-    from matplotlib.pyplot import figure, plot, show, axhline, xlim, ylim
+    if plot:
+        from matplotlib.pyplot import figure, plot, show, axhline, xlim, ylim
 
     # DETERMINE DATA FITTING REGION
     # ---
+    
+    #
+    l,m = lm
     
     # 0. Select and unpack
     f,amp_fd,dphi_fd,alpha,beta,gamma = data
@@ -376,20 +481,49 @@ def determine_data_fitting_region(data, threshold=0.015):
     dphi_fd_1  = smooth( dphi_fd[pre_mask][mask_1], width=30 ).answer
     f_1 = f[pre_mask][mask_1]
     
+    
+    #
+    shift_1 = 0
+    if l==3:
+        if simname in 'q4a08t30dPm5p5dRm47_T_96_360':
+            shift_1 = 0.015
+        if simname in 'q8a08t30dPm9':
+            shift_1 = 0.015
+        if simname in 'q8a08t60Ditm45dr075_96_360':
+            shift_1 = -0.008
+        if simname in 'q2_a10_a28_ph0_th30':
+            shift_1 = 0.008
+    
     # 2. Handle unstable end behavior and remask
     peaks,peak_locations = findpeaks( dphi_fd_1 )
+    using_mask_1 = False
     if len(peak_locations):
         mask_2    = range(0,peak_locations[-1]+1)
         dphi_fd_2 = dphi_fd_1[mask_2]
         f_2 = f_1[mask_2]
-        mask_3 = f_2<0.12
+        mask_3 = f_2 < (min(0.12*l*0.5,0.152) + shift_1)
         dphi_fd_3 = dphi_fd_2[ mask_3 ]
     else:
+        # alert('Using mask_1')
+        using_mask_1 = True
         mask_2 = mask_1
         dphi_fd_3 = dphi_fd_1
     
     # 3. Determine location of the lorentzian min
-    lorentzian_mindex = mask_1[mask_2[argmin( dphi_fd_3 )]]
+    try:
+        if using_mask_1:
+            lorentzian_mindex = mask_1[argmin( dphi_fd_3 )]
+        else:
+            lorentzian_mindex = mask_1[mask_2[argmin( dphi_fd_3 )]]
+    except:
+        from matplotlib.pyplot import figure, plot, show, axhline, xlim, ylim
+        from positive import error
+        figure()
+        #print('>> ',len(mask_2),mask_2[argmin( dphi_fd_3 )])
+        plot( dphi_fd_3 )
+        plot( argmin( dphi_fd_3 ), dphi_fd_3[argmin( dphi_fd_3 )], marker = 'o', ms=8 )
+        show()
+        error('something went wrong')
     dphi_lorentzian_min = min( dphi_fd_3 )
     
     # 4. Use the lorentzian_mindex to define the start and end of the fitting region
@@ -399,6 +533,7 @@ def determine_data_fitting_region(data, threshold=0.015):
     # f_min = max(f_lorentzian_min * 0.22, 0.018) 
     f_max = f_lorentzian_min + 0.012# 0.018 # 0.012
     calibration_mask = arange(len(f))[(f>=f_min) & (f<=f_max)]
+        
     
     # 5. Select region for output 
     calibration_data = data.T[ calibration_mask ]

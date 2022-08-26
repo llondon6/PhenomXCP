@@ -24,7 +24,7 @@ alert('Lastly, we are currently on this branch: %s'%bold(magenta(branch_name)))
 
 #
 if branch_name != 'pnrv1-ll':
-    alert('We are not on the expected branch. This may cause unexpected behavior.',say=True)
+    alert('We are not on the expected branch. This may cause unexpected behavior.',say=not True)
     
     
 #
@@ -126,7 +126,7 @@ for j,f_ in enumerate(files):
     opt_amp,opt_dphi = action_helper(f,*popt)
     
     #
-    mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=501 )
+    mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0 )
     mod_xhm = mod_xhm_dict[ll,ll]
     mod_xhm_amp = abs(mod_xhm)
     mod_xhm_phi = unwrap( angle(mod_xhm) )

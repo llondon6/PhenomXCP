@@ -109,7 +109,7 @@ for a in A:
         # ** Go to coprecessing frame, symmetrize, revert back to original frame **
         subframe[ll] = gwylmo_cpclean( raw_subframe )
         
-        # Solve the optimal emission problem and rotatate multipoles
+        # Solve the optimal emission problem and rotate multipoles
         cp_subframe_fd[ll] =  subframe[ll].__calc_coprecessing_frame__( kind=kind, 
                                                                      transform_domain='fd' )
         
