@@ -70,7 +70,7 @@ for ll,mm in gc.lmlist:
     reverse_index_map = argsort( index_map ).astype(int) # array([ int(c) for c in argsort( index_map ) ]),dtype=int
 
     # Get number of parameters to be tuned
-    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),ell=2)
+    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm))
     var_count = scarecrow.__code__.co_argcount - 1
 
     #
@@ -209,7 +209,7 @@ for ll,mm in gc.lmlist:
         ylim( limy(f, dphi_fd,dilate=0.1) )
         title(simname,size=12,loc='left')
         legend(ncol=2,loc=1)
-        ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{22})$')
+        ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{%i%i})$'%(ll,mm))
         xlabel('$fM$')
         title(simname,loc='left',size=12)
         
@@ -223,7 +223,7 @@ for ll,mm in gc.lmlist:
         legend(ncol=2,loc=3)
         ylim( limy(f, amp_fd,dilate=1.2) )
         xlabel('$fM$')
-        ylabel(r'$|\tilde{h}_{22}(f)|$')
+        ylabel(r'$|\tilde{h}_{%i%i}(f)|$'%(ll,mm))
         title(simname,loc='left',size=12)
         
         #

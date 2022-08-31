@@ -260,7 +260,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         
         # Set deviations from base model based on inputs
         # mu2,mu3,mu4,nu4,nu5,nu6,zeta2 = [ double(k) for k in (mu2,mu3,mu4,nu4,nu5,nu6,zeta2) ]
-        # print('3>> ',*(mu1, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2),'\n')
+        # print('3>> ',*(mu1, mu2, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2),'\n')
         if (l,m) == (2,2):
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU1(lalparams, mu1)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2(lalparams, mu2)
@@ -340,15 +340,15 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),**kwargs):
     lmlist = [ (ell,emm) ]
     
     #
-    def template_together( f, mu1=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
+    def template_together_helper( f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
         
-        #
-        mu2 = 0
+        # #
+        # mu2 = 0
         
         # Calculate PhenomXPHM with the input deviations
         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model. NOTE that we try and except here becuase sometimes the optimization routines can stray outside of the accepted model domain thus causing LAL to throw an error
         try:
-            # print('2>> ',*(mu1, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2))
+            # print('2>> ',*(mu1, mu2, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2))
             multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
         except:
             warning('Something went wrong with the standard evaluation:')
@@ -379,6 +379,12 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),**kwargs):
         
         #
         return amplitude,phase_derivative
+        
+    # We need to acknowledge here that the (2,2) moment is not sensitive to mu4. We do this by prototyping the waveform function to explicitely ignore mu4 as an input 
+    if ell == 2:
+        template_together = lambda f, mu1=0, mu2=0, mu3=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+    else:
+        template_together = template_together_helper
         
     # #
     # def template_together( f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
@@ -601,20 +607,28 @@ def select_scenty_metadata( sceo ):
 
    
 # Advanced gloss atop mvpolyfit.plot and mvrfit.plot
-def advanced_gmvx_plot( fit_object ):
+def advanced_gmvx_plot( fit_object, ll, mm ):
     
     '''
     Advanced gloss atop mvpolyfit.plot and mvrfit.plot
     '''
     
     from matplotlib.pyplot import subplots, plot, xlabel, ylabel, title, sca, gca, figaspect, tight_layout
-    from numpy import cos,sin,array,around,ones_like,sort,pi,linspace
+    from numpy import cos,sin,array,around,ones_like,sort,pi,linspace,mod
     from positive import eta2q,q2eta,eta2delta,rgb
     from glob import glob
     from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict
     
     # Load and unpack physical parameter space
-    raw_domain = loadtxt(data_dir+'version2/fit_initial_binary_parameters.txt')
+    first_raw_domain = loadtxt(data_dir+'version2/fit_initial_binary_parameters.txt')
+    theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_ = first_raw_domain.T
+    
+    #
+    if mod(mm,2) == 0:
+        raw_domain = first_raw_domain
+    else:
+        mask = around( m1/m2 ) != 1
+        raw_domain = first_raw_domain[ mask, : ]
     theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_ = raw_domain.T
 
 
