@@ -101,7 +101,7 @@ def get_xphm_coprec(ell, emm, Mtotal, q, chi1, chi2, pnr=False):
     return freqs, hlmpos.data.data, hlmneg.data.data
 
 #
-def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=0, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0,__set_XPHMThresholdMband__=True, option_shorthand=None ):
+def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=0, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0,__set_XPHMThresholdMband__=True, option_shorthand=None ):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -175,7 +175,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         elif option_shorthand == '3-xphm-ezh':
             
             #
-            pflag = 501 if ll==2 else 500 # Use EZH's effective ringdown frequency for dominant multipole moments
+            pflag = 501  # Use EZH's effective ringdown frequency for dominant multipole moments
             fsflag = 0 # Use default behavior for XPHM
             # alert('(l,m) = (%i,%i), pflag = %i'%(ll,mm,pflag))
             
@@ -266,6 +266,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2(lalparams, mu2)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU3(lalparams, mu3)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU4(lalparams, mu4)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU0(lalparams, nu0)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU4(lalparams, nu4)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU5(lalparams, nu5)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU6(lalparams, nu6)
@@ -276,6 +277,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2l3m3(lalparams, mu2)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU3l3m3(lalparams, mu3)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU4l3m3(lalparams, mu4)
+            lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU0l3m3(lalparams, nu0)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU4l3m3(lalparams, nu4)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU5l3m3(lalparams, nu5)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU6l3m3(lalparams, nu6)
@@ -326,7 +328,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
 
 
 #
-def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),**kwargs):
+def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2), turn_on_relative_dphi_mode=False,**kwargs):
     
     # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
     
@@ -340,19 +342,17 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),**kwargs):
     lmlist = [ (ell,emm) ]
     
     #
-    def template_together_helper( f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
-        
-        # #
-        # mu2 = 0
+    def template_together_helper( f, mu1=0, mu2=0, mu3=0, mu4=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
         
         # Calculate PhenomXPHM with the input deviations
         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model. NOTE that we try and except here becuase sometimes the optimization routines can stray outside of the accepted model domain thus causing LAL to throw an error
-        try:
-            # print('2>> ',*(mu1, mu2, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2))
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
-        except:
-            warning('Something went wrong with the standard evaluation:')
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0,**kwargs )
+        multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
+        # try:
+        #     # print('2>> ',*(mu1, mu2, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2))
+        #     multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
+        # except:
+        #     warning('Something went wrong with the standard evaluation:')
+        #     multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0,**kwargs )
         
         # 
         complex_strain = multipole_dict[ell,ell]
@@ -364,55 +364,35 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),**kwargs):
         phase = unwrap( angle(complex_strain) )
         phase_derivative = spline_diff(f,phase,k=5)
         
-        # Find min phase derivative
+        # Find min phase derivative to subtract off
+        
+        # determine the desired value  
         mask = (f>0.03*ell/2)&(f<0.12*ell/2)
         min_phase_derivative = min( phase_derivative[ mask ] )
-        # Adjust phase derivative 
-        phase_derivative -= min_phase_derivative
-        
-        # # Find min phase derivative
-        # mask = (f>0.03)&(f<0.12)
-        # min_phase_derivative = min( phase_derivative[ mask ] )
-        # # Adjust phase derivative 
-        # # phase_derivative -= min_phase_derivative
-        # phase_derivative -= mean(phase_derivative)
         
         #
-        return amplitude,phase_derivative
+        if not turn_on_relative_dphi_mode:
         
-    # We need to acknowledge here that the (2,2) moment is not sensitive to mu4. We do this by prototyping the waveform function to explicitely ignore mu4 as an input 
-    if ell == 2:
-        template_together = lambda f, mu1=0, mu2=0, mu3=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
-    else:
-        template_together = template_together_helper
-        
-    # #
-    # def template_together( f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
-        
-    #     # Calculate PhenomXPHM with the input amplitude deviations
-    #     # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model
-    #     try:
-    #         multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
-    #     except:
-    #         multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0 )
-        
-    #     # 
-    #     complex_strain = multipole_dict[ell,ell]
+            # # Adjust phase derivative 
+            # phase_derivative -= min_phase_derivative 
+            # NOTE that we dont want the line above on: we do this so that the internal model offset parameter can be tuned simultaneously with the other parameters, and so that the relative time shift behavior in XHM is undisturbed
             
-    #     # Given the complex FD waveform, compute its amplitude
-    #     amplitude = abs(complex_strain)
-    #     # Given the complex FD waveform, compute its phase derivative
-    #     complex_strain = multipole_dict[ell,ell]
-    #     phase = unwrap( angle(complex_strain) )
-    #     phase_derivative = spline_diff(f,phase)
-    #     # Find min phase derivative
-    #     mask = (f>0.03)&(f<0.12)
-    #     min_phase_derivative = min( phase_derivative[ mask ] )
-    #     # Adjust phase derivative 
-    #     phase_derivative -= min_phase_derivative
+            #
+            return amplitude,phase_derivative
+            
+        else:
+            
+            #
+            return amplitude,phase_derivative,min_phase_derivative
         
-    #     #
-    #     return amplitude,phase_derivative
+    # We need to acknowledge here that the (2,2) moment is not sensitive to mu4 (and maybe other inputs). We do this by prototyping the waveform function to explicitely ignore mu4 as an input 
+    if ell == 2:
+        # no mu4 and nu0
+        template_together = lambda f, mu1=0, mu2=0, mu3=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=0, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+    else:
+        # no nu0
+        template_together = lambda f, mu1=0, mu2=0, mu3=0, mu4=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+        
         
     #
     return template_together # template_amp, make_template_dphi
@@ -460,7 +440,7 @@ def determine_data_fitting_region_legacy( data, fmin=0.03, fmax=0.12 ):
 
 
 # Function to determine version2 data fitting region
-def determine_data_fitting_region(data, threshold=0.015, lm=(2,2), plot=False, simname=None ):
+def determine_data_fitting_region_legacy_2(raw_data_array, threshold=0.015, lm=(2,2), plot=False, simname=None, floor_dphi=True, f_lim = None, smooth_dphi = False, fring=None ):
     '''
     Given version2 data array, determine fitting region dynamically.
     This function assumes clean data within the default or input values of fmin and fmax, and then uses the phase derivate to determine new fmin and fmax values that are ultimately used to define a fitting region.
@@ -481,72 +461,205 @@ def determine_data_fitting_region(data, threshold=0.015, lm=(2,2), plot=False, s
     # 0. Select and unpack
     f,amp_fd,dphi_fd,alpha,beta,gamma = data
     
-    # 1. Find smoothest part
-    pre_mask = (f>0) #& (f<0.12)
-    mask_1     = smoothest_part_by_threshold( dphi_fd[pre_mask], threshold=threshold, smooth_width=20, plot=False )
-    dphi_fd_1  = smooth( dphi_fd[pre_mask][mask_1], width=30 ).answer
-    f_1 = f[pre_mask][mask_1]
-    
+    #
+    if smooth_dphi:
+        error('dont do this; not fully tested')
+        dphi_fd = smooth(dphi_fd,width=20).answer
     
     #
-    shift_1 = 0
-    if l==3:
-        if simname in 'q4a08t30dPm5p5dRm47_T_96_360':
-            shift_1 = 0.015
-        if simname in 'q8a08t30dPm9':
-            shift_1 = 0.015
-        if simname in 'q8a08t60Ditm45dr075_96_360':
-            shift_1 = -0.008
-        if simname in 'q2_a10_a28_ph0_th30':
-            shift_1 = 0.008
-    
-    # 2. Handle unstable end behavior and remask
-    peaks,peak_locations = findpeaks( dphi_fd_1 )
-    using_mask_1 = False
-    if len(peak_locations):
-        mask_2    = range(0,peak_locations[-1]+1)
-        dphi_fd_2 = dphi_fd_1[mask_2]
-        f_2 = f_1[mask_2]
-        mask_3 = f_2 < (min(0.12*l*0.5,0.152) + shift_1)
-        dphi_fd_3 = dphi_fd_2[ mask_3 ]
-    else:
-        # alert('Using mask_1')
-        using_mask_1 = True
-        mask_2 = mask_1
-        dphi_fd_3 = dphi_fd_1
-    
-    # 3. Determine location of the lorentzian min
-    try:
-        if using_mask_1:
-            lorentzian_mindex = mask_1[argmin( dphi_fd_3 )]
-        else:
-            lorentzian_mindex = mask_1[mask_2[argmin( dphi_fd_3 )]]
-    except:
-        from matplotlib.pyplot import figure, plot, show, axhline, xlim, ylim
-        from positive import error
-        figure()
-        #print('>> ',len(mask_2),mask_2[argmin( dphi_fd_3 )])
-        plot( dphi_fd_3 )
-        plot( argmin( dphi_fd_3 ), dphi_fd_3[argmin( dphi_fd_3 )], marker = 'o', ms=8 )
-        show()
-        error('something went wrong')
-    dphi_lorentzian_min = min( dphi_fd_3 )
-    
-    # 4. Use the lorentzian_mindex to define the start and end of the fitting region
-    f_lorentzian_min = f[pre_mask][ lorentzian_mindex ]
-    # f_lorentzian_min = f[mask_1][mask_2][ lorentzian_mindex ]
-    f_min = f_lorentzian_min * 0.2 
-    # f_min = max(f_lorentzian_min * 0.22, 0.018) 
-    f_max = f_lorentzian_min + 0.012# 0.018 # 0.012
-    calibration_mask = arange(len(f))[(f>=f_min) & (f<=f_max)]
+    if f_lim is None:
         
+        # 1. Find smoothest part
+        pre_mask = (f>0) #& (f<0.12)
+        mask_1     = smoothest_part_by_threshold( dphi_fd[pre_mask], threshold=threshold, smooth_width=20, plot=False )
+        dphi_fd_1  = smooth( dphi_fd[pre_mask][mask_1], width=30 ).answer
+        f_1 = f[pre_mask][mask_1]
+        
+        
+        #
+        shift_1 = 0
+        if l==3:
+            if simname in 'q4a08t30dPm5p5dRm47_T_96_360':
+                shift_1 = 0.015
+            if simname in 'q8a08t30dPm9':
+                shift_1 = 0.015
+            if simname in 'q8a08t60Ditm45dr075_96_360':
+                shift_1 = -0.008
+            if simname in 'q2_a10_a28_ph0_th30':
+                shift_1 = 0.008
+        
+        # 2. Handle unstable end behavior and remask
+        peaks,peak_locations = findpeaks( dphi_fd_1 )
+        using_mask_1 = False
+        if len(peak_locations):
+            mask_2    = range(0,peak_locations[-1]+1)
+            dphi_fd_2 = dphi_fd_1[mask_2]
+            f_2 = f_1[mask_2]
+            mask_3 = f_2 < (min(0.12*l*0.5,0.152) + shift_1)
+            dphi_fd_3 = dphi_fd_2[ mask_3 ]
+        else:
+            # alert('Using mask_1')
+            using_mask_1 = True
+            mask_2 = mask_1
+            dphi_fd_3 = dphi_fd_1
+        
+        # 3. Determine location of the lorentzian min
+        try:
+            if using_mask_1:
+                lorentzian_mindex = mask_1[argmin( dphi_fd_3 )]
+            else:
+                lorentzian_mindex = mask_1[mask_2[argmin( dphi_fd_3 )]]
+        except:
+            from matplotlib.pyplot import figure, plot, show, axhline, xlim, ylim
+            from positive import error
+            figure()
+            #print('>> ',len(mask_2),mask_2[argmin( dphi_fd_3 )])
+            plot( dphi_fd_3 )
+            plot( argmin( dphi_fd_3 ), dphi_fd_3[argmin( dphi_fd_3 )], marker = 'o', ms=8 )
+            show()
+            error('something went wrong')
+        dphi_lorentzian_min = min( dphi_fd_3 )
+        
+        # 4. Use the lorentzian_mindex to define the start and end of the fitting region
+        f_lorentzian_min = f[pre_mask][ lorentzian_mindex ]
+        # f_lorentzian_min = f[mask_1][mask_2][ lorentzian_mindex ]
+        f_min = f_lorentzian_min * 0.2 
+        # f_min = max(f_lorentzian_min * 0.22, 0.018) 
+        f_max = f_lorentzian_min + 0.012# 0.018 # 0.012
+        calibration_mask = arange(len(f))[(f>=f_min) & (f<=f_max)]
+    
+    else:
+        
+        #
+        f_min,f_max = f_lim    
+        calibration_mask = arange(len(f))[(f>=f_min) & (f<=f_max)]
+        smoothed_dphi = smooth(dphi_fd,width=30).answer
+        dphi_lorentzian_min = min(smoothed_dphi)
+        f_lorentzian_min = f[ argmin( smoothed_dphi ) ]
     
     # 5. Select region for output 
     calibration_data = data.T[ calibration_mask ]
     # 6. Smooth phase derivative data and subtract min
-    calibration_data.T[2] = dphi_fd[calibration_mask] - dphi_lorentzian_min
+    calibration_data.T[2] = dphi_fd[calibration_mask] - ( dphi_lorentzian_min if floor_dphi else 0 )
     # calibration_data.T[2] = smooth( dphi_fd, width=10 ).answer[calibration_mask] - dphi_lorentzian_min
     # calibration_data.T[2] = smooth( calibration_data.T[2], width=30 ).answer
+    
+
+    #
+    return calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min
+
+
+# Function to determine version2 data fitting region
+def determine_data_fitting_region(raw_data_array, fring, lm=(2,2), floor_dphi=True, plot=False, simname=None, ax=None ):
+    '''
+    Given version4 data array, determine fitting region dynamically.
+    This function assumes clean data within the default or input values of fmin and fmax, and then uses the phase derivate to determine new fmin and fmax values that are ultimately used to define a fitting region.
+    '''
+
+    # Import usefuls
+    from numpy import argmin, log, arange, unwrap, mean
+    from positive import smooth, find, lim, smoothest_part_by_threshold,findpeaks,limy
+    if plot:
+        from matplotlib.pyplot import plot,figure,figaspect,axvline,axhline,xlim,ylim,xscale,show,sca
+
+    #
+    ll,mm = lm
+    
+    #
+    if simname is None: simname = ''
+    
+    #
+    f,amp,raw_dphi,alpha,beta,gamma = raw_data_array
+    
+    #
+    dphi_shifted = unwrap(raw_dphi,discont=4000)
+    
+    shift_mask = (f>0.014*ll*0.5) & (f<fring)
+    dphi_reshifted = dphi_shifted - mean(dphi_shifted[shift_mask]-raw_dphi[shift_mask])
+    
+    # --- Case specific toggles --- #
+    #
+    smooth_width = 40
+    upscale = 1.2
+    downscale = 0.014
+    out_smoothed_data = False
+    #
+    if ll==2:
+        #
+        if 'q1a08t60' in simname:
+            smooth_width = 60
+        if 'q1a06t30dPm35' in simname:
+            smooth_width = 10
+            downscale = 0.019
+        if 'q2_a10_a28_ph0_th60' in simname:
+            upscale = 1.1
+        if 'q1a08t60' in simname:
+            smooth_width = 90
+        if 'q1a06t120' in simname:
+            smooth_width = 20
+            downscale = 0.019
+    if ll==3:
+        if 'q4a08t60dPm3dRm250' in simname:
+            upscale = 1.05
+    #
+    # ----------------------------- #
+    
+    #
+    dphi = dphi_reshifted
+    s_dphi = smooth(dphi,width=smooth_width).answer
+
+    #
+    f0,f1 = downscale*ll*0.5, fring*upscale
+    mask_1 = (f>f0) & (f<f1)
+    
+    #
+    dphi_lorentzian_min = min(s_dphi[mask_1])
+    f_lorentzian_min    = f[mask_1][ argmin(s_dphi[mask_1]) ]
+    
+    #
+    f_min = f_lorentzian_min*0.2
+    f_max = f_lorentzian_min+0.012
+    
+    #
+    calibration_mask =  (f>f_min) & (f<f_max)
+    
+    #
+    if plot:
+        
+        #
+        if ax is None:
+            figure( figsize=2*figaspect(0.618) )
+        else:
+            sca(ax)
+        plot( f, dphi )
+        plot( f, s_dphi, color='k', ls='-', lw=2, alpha=0.2 )
+        plot( f_lorentzian_min, dphi_lorentzian_min, marker='o', ms=8, mfc='none', color='k', zorder=100, mew=2 )
+        
+        axvline( f0, c='g',ls='-')
+        axvline( f1, c='g',ls='-')
+        
+        axvline( f_min, c='r',ls='--')
+        axvline( f_max, c='r',ls='--')
+        
+        axvline( fring, c='k',ls='--')
+        
+        xlim( f_min*0.9, f_max/0.9)
+        ylim( limy(f[calibration_mask],dphi[calibration_mask],dilate=0.1) )
+        alert(simname)
+        xscale('log')
+        if ax is None: show()
+    
+    #
+    offset =  dphi_lorentzian_min if floor_dphi else 0 
+    if out_smoothed_data:
+        calibration_dphi = s_dphi[ calibration_mask ] - offset
+    else:
+        calibration_dphi = dphi[ calibration_mask ] - offset
+    
+    # Select region for output 
+    calibration_data = raw_data_array.T[ calibration_mask ]
+    # Store final dphi
+    calibration_data.T[2] = calibration_dphi
     
 
     #

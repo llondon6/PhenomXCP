@@ -84,9 +84,9 @@ for ll,mm in gc.lmlist:
     # Load and unpack physical parameter space
     # NOTE that the order of these parameters must be the same as that in files
     opt_parameter_range = loadtxt(datadir+'fit_opt_parameters_l%im%i.txt'%(ll,mm))
-    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm))
-    parameter_names_in_order = scarecrow.__code__.co_varnames[1:scarecrow.__code__.co_argcount]
-    model_range = {  parameter_names_in_order[k]:var for k,var in enumerate(opt_parameter_range.T) }
+    # scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm))
+    # parameter_names_in_order = scarecrow.__code__.co_varnames[1:scarecrow.__code__.co_argcount]
+    # model_range = {  parameter_names_in_order[k]:var for k,var in enumerate(opt_parameter_range.T) }
 
     #
     fig,ax = subplots( len(files), 2, figsize=3*array([ 2.5*2/(0.618), 1.5*len(files) ]) )

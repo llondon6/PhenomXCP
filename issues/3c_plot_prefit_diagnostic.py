@@ -34,11 +34,17 @@ from numpy.linalg import norm
 from scipy.optimize import curve_fit
 
 
+#
+datadir = '/Users/book/KOALA/PhenomXCP/data/version4/'
+foo_path = datadir+'dphi_shift_dict_l%im%i.pickle'%(3,3)
+dphi_shift_dict_l3m3 = pickle.load( open( foo_path, "rb" ) )
+#
+dphi_shift_dict_l2m2 = { simname:0 for simname in dphi_shift_dict_l3m3 }
+
 # For all pairs of l and m in the global config file
 for ll,mm in gc.lmlist:
 
     #
-    datadir = '/Users/book/KOALA/PhenomXCP/data/version2/'
     files = glob( datadir+'*_l%im%i.txt'%(ll,mm) )
     files.sort()
     
@@ -56,6 +62,14 @@ for ll,mm in gc.lmlist:
 
     #
     foo = {}
+    
+    # Load time shifts
+    if ll==3:
+        dphi_shift_dict = dphi_shift_dict_l3m3
+    else:
+        dphi_shift_dict = dphi_shift_dict_l2m2
+    # print('l%im%i> '%(ll,mm),dphi_shift_dict)
+    
 
     #
     p = 0
@@ -68,24 +82,60 @@ for ll,mm in gc.lmlist:
         alert(simname)
         k = [ k for k,val in enumerate(metadata_dict['simname']) if val in simname ][0]
 
-        # Load data for this case
-        raw_data = loadtxt(f_).T
-        calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, simname=simname, lm=(ll,mm) )
-
         # Collect params for this case 
         metadata = metadata_dict['array_data'][k,:]
 
         #
-        f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
-        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = metadata_dict['array_data'][k]
+        # Collect params for this case 
+        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,Mf,Xf = metadata_dict['array_data'][k,:]
         chi1_vec = array([chi1_x,chi1_y,chi1_z])
         chi2_vec = array([chi2_x,chi2_y,chi2_z])
         #dphi_fd -= min( dphi_fd[ (f>0.03)&(f<0.12) ] )
         
+        #
+        qnmo_p = qnmobj( Mf, Xf, ll, mm,0,p=1,use_nr_convention=True,verbose=False,calc_slm=False,calc_rlm=False )
+        fring  = qnmo_pr.CW.real / (2*pi)
+
+        # Load data for this case
+        raw_data = loadtxt(f_).T
+        calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, fring, lm=(ll,mm), floor_dphi=True, plot=True, simname=simname)
+        
+        #
+        f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
+        
         # tell the XCP package to generate a PhenomXPHM waveform
+        action_helper_l2m2 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(2,2),option_shorthand='2-xphm')
         action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='2-xphm')
         # action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm))
+        mod_xhm0_amp_l2m2,mod_xhm0_dphi_l2m2 = action_helper_l2m2(f)
         mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
+        
+        
+        ''' 
+        NOTE
+        ---
+        A choice must be made about where to set the minimum value of the NR (2,2) minimum phase derivative value. The motivations guiding this choice are:
+        * The tuned coprecessing (2,2) model should as much as possible maintain the relative min phase derivative (min dphi) values that are encoded within *XPHM*, not the *XHM* value. This is key as 
+        * The min dphi value of the (3,3) multipole should be tuned to NR away from the value defined within *XPHM*
+        * Enforcing these to criteria will, for other multipole moments, change their dphi relationships relative to the (3,3) moment, but maintain the min dphi relationship with (2,2) up to modeling error within the XCP calibration region.
+        
+        THUS the XPHM min dphi relationships will be used for (2,2) and (3,3) tuning, NOT those from XHM, despite the fact that all other tuning aspect will be done relative to XPHM .... This actually implies that the best thing to do is to use XPHM as a base model, *not* XHM. However, this would have the primary complication of causing structure in deviations to the ringdown frequency that cannot be modeled with polynomials. ...
+        '''
+        
+        #
+        min_mod_xhm0_dphi_l2m2 = min(mod_xhm0_dphi_l2m2)
+        # dphi_fd += min_mod_xhm0_dphi_l2m2
+        
+        # 
+        dphi_fd_enforced_min = dphi_shift_dict[simname] if not ('q1' in simname) else 0
+        dphi_fd += min_mod_xhm0_dphi_l2m2 + dphi_fd_enforced_min
+        
+        
+        # print('** ',simname)
+        # print('>> ',dphi_fd_enforced_min)
+        # print('>> ',dphi_shift_dict[simname])
+        # print('>> ',sum(dphi_shift_dict.values()))
+        # error()
         
         # EZH effective ringdown 
         mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, [(ll,mm)], m1, m2, chi1_vec, chi2_vec, option_shorthand='3-xphm-ezh' )
@@ -94,7 +144,7 @@ for ll,mm in gc.lmlist:
         mod_xhm_amp = abs(mod_xhm)
         mod_xhm_phi = unwrap( angle(mod_xhm) )
         mod_xhm_dphi = spline_diff(f,mod_xhm_phi)
-        mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03*ll/2)&(f<0.12*ll/2) ] )
+        # mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03*ll/2)&(f<0.12*ll/2) ] )
 
         # XAS/XHM
         xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, [(ll,mm)], m1, m2, chi1_vec, chi2_vec, option_shorthand='4-xhm' )
@@ -102,7 +152,7 @@ for ll,mm in gc.lmlist:
         xhm_amp = abs(xhm)
         xhm_phi = unwrap( angle(xhm) )
         xhm_dphi = spline_diff(f,xhm_phi)
-        xhm_dphi -= min( xhm_dphi[ (f>0.03*ll/2)&(f<0.12*ll/2) ] )
+        # xhm_dphi -= min( xhm_dphi[ (f>0.03*ll/2)&(f<0.12*ll/2) ] )
 
         # PLOTTING
         # ---
@@ -111,8 +161,8 @@ for ll,mm in gc.lmlist:
         sca(ax[p]); p+=1
         plot( f, dphi_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
         plot( f, xhm_dphi, label='PhenomXHM', ls=':',lw=2,alpha=0.85,color='k' )
-        plot( f, mod_xhm_dphi, label='PhenomXP(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
-        plot( f, mod_xhm0_dphi, label='PhenomXP(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+        plot( f, mod_xhm_dphi, label='PhenomXPHM(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
+        plot( f, mod_xhm0_dphi, label='PhenomXPHM', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
         # xscale('log')
         xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
         ylim( limy(f, mod_xhm_dphi,dilate=0.1) )
@@ -122,12 +172,16 @@ for ll,mm in gc.lmlist:
         xlabel('$fM$')
         title(simname,loc='left',size=12)
         axhline(0,ls='--',color='k',alpha=0.7)
+        # axhline(dphi_fd_enforced_min,ls='--',color='k',alpha=0.7)
+        #
+        axhline(min_mod_xhm0_dphi_l2m2,c='tab:green',ls='--')
+        alert(min_mod_xhm0_dphi_l2m2)
 
         sca(ax[p]); p+=1
         plot( f, amp_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
         plot( f, xhm_amp, label='PhenomXHM', ls=':',lw=2,alpha=0.85,color='k' )
-        plot( f, mod_xhm_amp, label='PhenomXP(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
-        plot( f, mod_xhm0_amp, label='PhenomXP(0)', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+        plot( f, mod_xhm_amp, label='PhenomXPHM(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
+        plot( f, mod_xhm0_amp, label='PhenomXPHM', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
         yscale('log')
         xscale('log')
         legend(ncol=2)

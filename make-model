@@ -23,31 +23,31 @@ basedir=/Users/book/KOALA/PhenomXCP/issues
 # Fit waveforms and organize metadata
 # --
 # $basedir/3b_plot_prefit_diagnostic.py
-# $basedir/3c_fit_waveforms.py
+$basedir/3c_fit_waveforms.py
 
 # Fit model parameters across physical parameter space and then document
 # --
 # $basedir/4a_fit_hyper_parameters.py
-$basedir/4c_convert_fits_to_code.py
+# $basedir/4c_convert_fits_to_code.py
 
-# Make backup of relevant LALSimulation files 
-cp "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c_backup"
-cp "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.h" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.h_backup"
-# Copy new code to LALSimulation 
-cp "/Users/book/JOKI/Libs/KOALA/PhenomXCP/xcp/parameter_space_fits.c" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c"
-cp "/Users/book/JOKI/Libs/KOALA/PhenomXCP/xcp/parameter_space_fits.h" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.h"
-# Go to lalsimulation directory and compile with new code 
-refdir=$PWD
-cd /Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/
-make -j && make install 
-cd $refdir
+# # Make backup of relevant LALSimulation files 
+# cp "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c_backup"
+# cp "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.h" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.h_backup"
+# # Copy new code to LALSimulation 
+# cp "/Users/book/JOKI/Libs/KOALA/PhenomXCP/xcp/parameter_space_fits.c" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c"
+# cp "/Users/book/JOKI/Libs/KOALA/PhenomXCP/xcp/parameter_space_fits.h" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.h"
+# # Go to lalsimulation directory and compile with new code 
+# refdir=$PWD
+# cd /Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/
+# make -j && make install 
+# cd $refdir
 
 # Generate late stage diagnostic plots
 # --
-$basedir/5a_plot_postfit_diagnostic.py
+# $basedir/5a_plot_postfit_diagnostic.py
 # $basedir/4b_make_fit_diagnostic_plots.py
 # $basedir/5b_plot_extrapolation_a1_diagnostic.py
 # $basedir/5c_plot_extrapolation_q_diagnostic.py
 
 # Exit Conda env
-conda deactivate
+# conda deactivate

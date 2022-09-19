@@ -5,7 +5,7 @@ from positive import *
 from matplotlib.pyplot import *
 
 #
-def collect_nr_data_plotting_helper( ll, gwylmo, euler_alpha_beta_gamma ):
+def collect_nr_data_plotting_helper( ll, gwylmo, euler_alpha_beta_gamma, unwrap_dphi=True ):
     
     '''
     '''
@@ -74,18 +74,31 @@ def collect_nr_data_plotting_helper( ll, gwylmo, euler_alpha_beta_gamma ):
 
     #
     x0,x1 = est_domain_min*2, est_domain_max*1.2
-    center = lambda D,X: X - mean(X[(D>=x0) & (D<=x1)])
+    center = lambda D,X: X # - mean(X[(D>=x0) & (D<=x1)])
+    
+    # #
+    # unwrap_function = unwrap
+    
+    #
+    if unwrap_dphi:
+        unwrap_function = unwrap 
+    else:
+        unwrap_function = lambda x,**kwargs: x
 
     # 
-    codomain1 = center( domain, unwrap(gwfo_psi4.fd_dphi,discont=4000) )
-    codomain2 = center(-domain, unwrap(gwylmo[ll,-ll]['psi4'].fd_dphi,discont=4000) )
+    codomain1 = center( domain, unwrap_function(gwfo_psi4.fd_dphi,discont=4000) )
+    codomain2 = center(-domain, unwrap_function(gwylmo[ll,-ll]['psi4'].fd_dphi,discont=4000) )
+    
+    #
+    avg_codomain = 0.5*( codomain1 + spline(domain,codomain2)(-domain) )
     
     # *
-    output_data.append( unwrap(gwfo_psi4.fd_dphi,discont=4000) )
+    output_data.append( avg_codomain )
     format_tags.append('fd_dphi')
 
     plot( domain, codomain1, label=r'$d\phi_{%i%i}/df$'%(gwfo_strain.l,gwfo_strain.m) )
     plot(-domain, codomain2, color = 'k', zorder=-20, label='$m=%i$'%(-ll), ls='--', lw=3, alpha=0.4 )
+    plot( domain, avg_codomain, label=r'Avg.', color='k' )
     axvline( est_domain_max )
     axvline( est_domain_min )
 

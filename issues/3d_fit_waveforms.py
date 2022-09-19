@@ -24,11 +24,6 @@ alert('We are getting our LALSimulation from:\n%s'%magenta(lalsim_path))
 alert('We think that the related lalsuite source files are here:\n%s'%green(lalsuite_repo_path))
 alert('Lastly, we are currently on this branch: %s'%bold(magenta(branch_name)))
 
-#
-if branch_name != 'pnrv1-ll':
-    alert('We are not on the expected branch. This may cause unexpected behavior.',say=not True)
-
-
 # For all pairs of l and m in the global config file
 for ll,mm in gc.lmlist:
 
@@ -104,21 +99,20 @@ for ll,mm in gc.lmlist:
         raw_data = loadtxt(f_).T
         calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, simname=simname, lm=(ll,mm) )
 
+        # #
+        # dphi_lorentzian_shift = 0 # NOTE that this shift will only be applied to the calibration data
+        # if (ll,mm) != (2,2):
+        #     raw_data_22 = loadtxt( f_.replace('l%im%i'%(ll,mm),'l2m2') ).T
+        #     calibration_data_22, dphi_lorentzian_min_22, f_min_22, f_max_22, f_lorentzian_min_22 = determine_data_fitting_region( raw_data_22, simname=simname, lm=(2,2) )
+        #     # We will shift the phase derivative for the non 22 moment by min_phase_derivative_22 as defined below
+        #     min_phase_derivative_22 = dphi_lorentzian_min_22
+        
         # Collect params for this case 
         metadata = metadata_dict['array_data'][k,:]
 
         #
         f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
-        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = metadata_dict['array_data'][k]
-        
-        # dphi_fd -= mean(dphi_fd)
-            
-        # # Compute the phase from the phase derivative
-        # phi_fd = spline_antidiff( f, dphi_fd )
-        # # Compute complex strain
-        # h_fd = amp_fd * exp( 1j * phi_fd )
-        # amp_scale = f ** (7.0/6)
-        # std_h_fd_2 = std(h_fd*amp_scale)**2
+        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,_,_ = metadata_dict['array_data'][k]
         
         #
         chi1_vec = array([chi1_x,chi1_y,chi1_z])
@@ -127,29 +121,29 @@ for ll,mm in gc.lmlist:
         #
         physical_param_array[j,:] = metadata_dict['array_data'][k]
         
+        # Generate PhenomXHM waveform generators that allow for model deviations
+        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm')
+        
+        # FIX PHASE DERIVATIVE OFFSET TO THAT OF HXM
+        # NOTE that we do this so that the internal model offset parameter can be tuned simultaneously with the other parameters, and so that the relative time shift behavior in XHM is undisturbed
+        # ---
+        # Calculate default model amp and phase derivative
+        mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
+        #
+        xhm_min_phase_derivative = min(mod_xhm0_dphi)
+        # NOTE that dphi_fd has a min that is manually set to zero in determine_data_fitting_region(). HERE we enforce that the calibration data has the same min as XHM
+        dphi_fd += xhm_min_phase_derivative
+        
         # GENERATE TEMPLATE FUNCTIONS
         # ---
-        # Generate PhenomX (not PhenomXP) waveform generators that allow for model deviations
-        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm')
         def action( p, verbose=False, output_vars=False ):
             
             #
-            # print('>> ',p)
             amplitude,phase_derivative = action_helper( f, *p )
             
-            # # -- Compute FD waveforms, time-shift align, and then compute residual -- #
-            # # Compute optimal time shift 
-            # phase_shift = mean( phase_derivative - dphi_fd )
-            # # Compute model phase, shifted accordingly 
-            # phase = phase_derivative - phase_shift 
-            # # Compute complex strain 
-            # complex_strain = amplitude * exp( 1j * phase ) 
-            # #
-            # abs_res = abs(h_fd-complex_strain) * amp_scale
-            # combined_residual = sum(abs_res**2 / std_h_fd_2)
-            
             # -- Calculate residual of phase derivative -- #
-            phase_derivative -= min(phase_derivative)
+            # phase_derivative -= min(phase_derivative)
+            # NOTE that we do not shift the phase derivative as suggested above because we have enforced that  min(dphi_fd) == xhm_min_phase_derivative
             residual_phase_derivative = sum((dphi_fd - phase_derivative)**2) / std(dphi_fd)
             # -- Calculate residual of amplitude --------- #
             amp_scale = f ** (7.0/6)
@@ -167,9 +161,6 @@ for ll,mm in gc.lmlist:
         
         # PERFORM FIT
         # --- 
-        
-        # Calculate default model amp and phase derivative
-        mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
         
         # Perform fit 
         # # NOTE that carrying forward previous solutions as initial guesses causes problems UNLESS the simulations are distance sorted as can be seen above
@@ -193,11 +184,6 @@ for ll,mm in gc.lmlist:
         
         # PLOTTING
         # ---
-        
-        # align by requiring zero min
-        # dphi_fd -= min(dphi_fd) # NOTE that this is already done for the calibration data
-        best_fit_dphi -= min(best_fit_dphi)
-        mod_xhm0_dphi -= min(mod_xhm0_dphi)
         
         #
         sca(ax[p]); p+=1

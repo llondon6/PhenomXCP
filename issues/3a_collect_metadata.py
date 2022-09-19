@@ -92,6 +92,10 @@ for f in files:
     delta = (m1-m2)/(m1+m2)
     
     #
+    m_final   =     a.mf
+    chi_final = abs(a.xf)
+    
+    #
     simnames.append(file_name)
     metadata.append( [ theta,
                        m1,
@@ -109,7 +113,9 @@ for f in files:
                        chi1_vec[2],
                        chi2_vec[0],
                        chi2_vec[1],
-                       chi2_vec[2] ] )
+                       chi2_vec[2],
+                       m_final,
+                       chi_final ] )
 
 #
 print( 'Done.')
@@ -118,7 +124,7 @@ print( 'Done.')
 metadata_array = array(metadata)
 
 #
-keys = [ 'theta', 'm1', 'm2', 'eta', 'delta', 'chi_eff', 'chi_p', 'chi1', 'chi2', 'a1', 'a2', 'chi1_vec_x', 'chi1_vec_y', 'chi1_vec_z', 'chi2_vec_x', 'chi2_vec_y', 'chi2_vec_z' ]
+keys = [ 'theta', 'm1', 'm2', 'eta', 'delta', 'chi_eff', 'chi_p', 'chi1', 'chi2', 'a1', 'a2', 'chi1_vec_x', 'chi1_vec_y', 'chi1_vec_z', 'chi2_vec_x', 'chi2_vec_y', 'chi2_vec_z', 'm_final', 'chi_final' ]
 
 #
 metadata_dict = {}
