@@ -8,6 +8,8 @@ from glob import glob
 from xcp import determine_data_fitting_region
 import xcp
 
+error('Issue depreciated.')
+
 
 # Preliminaries
 # --

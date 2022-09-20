@@ -650,11 +650,15 @@ def determine_data_fitting_region(raw_data_array, fring, lm=(2,2), floor_dphi=Tr
         if ax is None: show()
     
     #
-    offset =  dphi_lorentzian_min if floor_dphi else 0 
     if out_smoothed_data:
-        calibration_dphi = s_dphi[ calibration_mask ] - offset
+        calibration_dphi = s_dphi[ calibration_mask ]
     else:
-        calibration_dphi = dphi[ calibration_mask ] - offset
+        calibration_dphi = dphi[ calibration_mask ]
+    
+    #
+    offset =  dphi_lorentzian_min if floor_dphi else 0 
+    calibration_dphi -= offset
+    # if ll==3: alert(offset)
     
     # Select region for output 
     calibration_data = raw_data_array.T[ calibration_mask ]

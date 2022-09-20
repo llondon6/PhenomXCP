@@ -109,38 +109,30 @@ for ll,mm in [ lm for lm in gc.lmlist if lm != (2,2)]:
         
         # ----
         
-        #
-        # ax_ = ax[p]; p+=1
-        
         # Load QNM info
         qnmo_p = qnmobj( Mf, Xf, ll, mm,0,p=1,use_nr_convention=True,verbose=False,calc_slm=False,calc_rlm=False )
         fring  = qnmo_p.CW.real / (2*pi)
         # Load data for this case
         raw_data = loadtxt(f_).T
-        # Determine data fitting region
-        calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, 
-                                                                                                            fring, 
-                                                                                                            lm=(ll,mm), 
-                                                                                                            floor_dphi=True, 
-                                                                                                            plot=not True, 
-                                                                                                            simname=simname)
+        
+        # **************************************** #
+        # Determine data fitting region for (3,3)  #
+        # **************************************** #
+        calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, fring, lm=(ll,mm), floor_dphi=not True, plot=not True, simname=simname)
         
         # Load QNM info
         qnmo_p = qnmobj( Mf, Xf, 2, 2,0,p=1,use_nr_convention=True,verbose=False,calc_slm=False,calc_rlm=False )
         fring_22  = qnmo_p.CW.real / (2*pi)
         # Load data for this case
         raw_data_22 = loadtxt(f_.replace('l3m3','l2m2')).T
-        # Determine data fitting region
-        calibration_data_22, dphi_lorentzian_min_22, f_min_22, f_max_22, f_lorentzian_min_22 = determine_data_fitting_region( raw_data_22, 
-                                                                                                            fring_22, 
-                                                                                                            lm=(2,2), 
-                                                                                                            floor_dphi=True, 
-                                                                                                            plot=not True,
-                                                                                                            simname=simname)
-        # xlim(f_min_22,f_max)
+        
+        # **************************************** #
+        # Determine data fitting region for (2,2)  #
+        # **************************************** #
+        calibration_data_22, dphi_lorentzian_min_22, f_min_22, f_max_22, f_lorentzian_min_22 = determine_data_fitting_region( raw_data_22,fring_22,lm=(2,2),floor_dphi=not True,plot=not True,simname=simname)
         
 
-        #
+        # Unpack calibration data
         f_22,amp_fd_22,dphi_fd_22,alpha_22,beta_22,gamma_22 = calibration_data_22.T
         f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
         
@@ -152,81 +144,14 @@ for ll,mm in [ lm for lm in gc.lmlist if lm != (2,2)]:
         mod_xhm0_amp,mod_xhm0_dphi,mod_xhm0_min_dphi          = action_helper(f)
         
         #
+        # ############################### #
         shifted_mod_xhm0_dphi = mod_xhm0_dphi - mod_xhm0_min_dphi_22
-        
-        #
-        # plot( f, shifted_mod_xhm0_dphi, label='PhenomXHM', ls='--',lw=1,alpha=1,color='k',zorder=-10 )
-        
-        #
         shifted_f_lorentzian_min = dphi_lorentzian_min - dphi_lorentzian_min_22
-        
-        #
-        shift_dict[simname] = shifted_f_lorentzian_min
-        
-        # ----
-        
-        # #
-        # qnmo_p = qnmobj( Mf, Xf, ll, mm,0,p=1,use_nr_convention=True,verbose=False,calc_slm=False,calc_rlm=False )
-        # fring  = qnmo_p.CW.real / (2*pi)
-
-        # # Load data for this case
-        # # --- (2,2)
-        # raw_data_22 = loadtxt(f_.replace('l%im%i'%(ll,mm),'l2m2')).T
-        # alert(simname)
-        # calibration_data_22, dphi_lorentzian_min_22, f_min_22, f_max_22, f_lorentzian_min_22 = determine_data_fitting_region( raw_data_22, fring, lm=(2,2), floor_dphi=False, plot=False, simname=simname)
-        
-        # #
-        # # NOTE: smooth_dphi=True is set because data must be smoothed before the fitting region is selected in order to avoid smoothing related boundary effects 
-        
-        # # --- (ll,mm)
-        # raw_data = loadtxt(f_).T
-        # calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, fring, lm=(ll,mm), floor_dphi=False, plot=False, simname=simname)
-
-        # #
-        # f_22,amp_fd_22,dphi_fd_22_raw,alpha_22,beta_22,gamma_22 = calibration_data_22.T
-        # f,amp_fd,dphi_fd_raw,alpha,beta,gamma = calibration_data.T
-        
-        # #
-        # theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,_,_ = metadata_dict['array_data'][k]
-        # chi1_vec = array([chi1_x,chi1_y,chi1_z])
-        # chi2_vec = array([chi2_x,chi2_y,chi2_z])
-        
-        # #
-        # action_helper_22 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(2,2), option_shorthand='4-xhm',turn_on_relative_dphi_mode=True)
-        # action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm), option_shorthand='4-xhm',turn_on_relative_dphi_mode=True)
-        # #
-        # mod_xhm0_amp_22,mod_xhm0_dphi_22,mod_xhm0_min_dphi_22 = action_helper_22(f)
-        # mod_xhm0_amp,mod_xhm0_dphi,mod_xhm0_min_dphi          = action_helper(f)
-        
-        
-        # # NOTE: smooth_dphi=True is set because data must be smoothed before the fitting region is selected in order to avoid smoothing related boundary effects. See code above.
-        # dphi_fd_22 = dphi_fd_22_raw  # smooth(dphi_fd_22_raw,width=20).answer
-        # dphi_fd    = dphi_fd_raw     # smooth(dphi_fd_raw,width=10).answer
-        
-        # #
         shifted_mod_xhm0_dphi = mod_xhm0_dphi - mod_xhm0_min_dphi_22
-        # # shifted_opt_dphi = opt_dphi - min_dphi_22
-        
-        # # ------------------------------- #
-        # df = f[1]-f[0]
-        # N = len(f)
-        # T = 1.0 / df
-        shifted_dphi_fd = dphi_fd + shifted_f_lorentzian_min
-        # shifted_f_lorentzian_min = dphi_lorentzian_min - dphi_lorentzian_min_22
-        # print('-> ',T,dphi_lorentzian_min_22,dphi_lorentzian_min)
-        # print('*> ',mod(dphi_lorentzian_min_22,T))
-        # print('*> ',mod(dphi_lorentzian_min,T))
-        # print('*> ',mod(dphi_lorentzian_min,T)-mod(dphi_lorentzian_min_22,T),'\n')
-        # # ------------------------------- #
-        
-        
-        
-        # # ******************************** #
-        # # Determine the optimal offset such that PNR overlaps with the calibration data (shifted_dphi_fd)
-        # # opt_pnr_shift = mean(shifted_dphi_fd-shifted_opt_dphi)
-        # # shifted_opt_dphi
-        # # shifted_opt_dphi_final = shifted_opt_dphi + opt_pnr_shift
-        # # ******************************** #
+        shifted_dphi_fd       = dphi_fd - dphi_lorentzian_min_22
+        # ------------------------------- #
+        shift_dict[simname] = shifted_f_lorentzian_min
+        # ############################### #
 
         # PLOTTING
         # ---
