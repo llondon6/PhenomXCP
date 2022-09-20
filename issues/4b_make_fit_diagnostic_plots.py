@@ -23,7 +23,7 @@ for ll,mm in gc.lmlist:
     #Load parameter space fit data
     alert('Loading parameter space fit data.')
     package_dir = parent( xcp.__path__[0] )
-    datadir = package_dir + 'data/version2/'
+    datadir = package_dir + 'data/version4/'
     foo_path = datadir+'parameter_space_fits_l%im%i.pickle'%(ll,mm)
     foo = pickle.load( open( foo_path, "rb" ) )
 
@@ -32,7 +32,7 @@ for ll,mm in gc.lmlist:
     # --------------------------------------- #
 
     #
-    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm))
+    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm),include_nu0=True,floor_dphi=False)
     parameter_names_in_order = scarecrow.__code__.co_varnames[1:scarecrow.__code__.co_argcount]
     # if ll==2:
     #     parameter_names_in_order = tuple([ parameter_names_in_order[j] for j,k in enumerate(parameter_names_in_order) if k!='mu4' ])

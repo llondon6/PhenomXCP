@@ -102,33 +102,32 @@ for ll,mm in [ lm for lm in gc.lmlist if lm != (2,2)]:
         
         
         # Collect params for this case 
-        metadata = metadata_dict['array_data'][k,:]
-        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,Mf,Xf = metadata
+        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,Mf,Xf = metadata_dict['array_data'][k,:]
         chi1_vec = array([chi1_x,chi1_y,chi1_z])
         chi2_vec = array([chi2_x,chi2_y,chi2_z])
         
         # ----
         
+        
+        # **************************************** #
+        # Determine data fitting region for (3,3)  #
+        # **************************************** #
         # Load QNM info
         qnmo_p = qnmobj( Mf, Xf, ll, mm,0,p=1,use_nr_convention=True,verbose=False,calc_slm=False,calc_rlm=False )
         fring  = qnmo_p.CW.real / (2*pi)
         # Load data for this case
         raw_data = loadtxt(f_).T
-        
-        # **************************************** #
-        # Determine data fitting region for (3,3)  #
-        # **************************************** #
         calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, fring, lm=(ll,mm), floor_dphi=not True, plot=not True, simname=simname)
         
+        
+        # **************************************** #
+        # Determine data fitting region for (2,2)  #
+        # **************************************** #
         # Load QNM info
         qnmo_p = qnmobj( Mf, Xf, 2, 2,0,p=1,use_nr_convention=True,verbose=False,calc_slm=False,calc_rlm=False )
         fring_22  = qnmo_p.CW.real / (2*pi)
         # Load data for this case
         raw_data_22 = loadtxt(f_.replace('l3m3','l2m2')).T
-        
-        # **************************************** #
-        # Determine data fitting region for (2,2)  #
-        # **************************************** #
         calibration_data_22, dphi_lorentzian_min_22, f_min_22, f_max_22, f_lorentzian_min_22 = determine_data_fitting_region( raw_data_22,fring_22,lm=(2,2),floor_dphi=not True,plot=not True,simname=simname)
         
 

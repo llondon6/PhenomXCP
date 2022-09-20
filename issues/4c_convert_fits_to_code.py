@@ -17,9 +17,9 @@ from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict,
 
 # Load and unpack physical parameter space
 package_dir = parent( xcp.__path__[0] )
-datadir = package_dir + 'data/version2/'
-raw_domain = loadtxt(datadir+'fit_initial_binary_parameters.txt')
-theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = raw_domain.T
+datadir = package_dir + 'data/version4/'
+raw_domain = loadtxt(datadir+'fit_initial_binary_parameters_l2m2.txt')
+theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,Mf,Xf = raw_domain.T
 
 # --------------------------------------- #
 # Initialize code strings
@@ -171,7 +171,7 @@ for ll,mm in gc.lmlist:
     # --------------------------------------- #
 
     #
-    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm))
+    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm),include_nu0=True,floor_dphi=False)
     parameter_names_in_order = scarecrow.__code__.co_varnames[1:scarecrow.__code__.co_argcount]
     fit_object = { k:foo[k] for k in parameter_names_in_order }
     

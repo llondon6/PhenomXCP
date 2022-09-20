@@ -328,7 +328,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
 
 
 #
-def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2), turn_on_relative_dphi_mode=False,**kwargs):
+def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),include_nu0=False,floor_dphi=True,**kwargs):
     
     # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
     
@@ -336,23 +336,31 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2), turn_on_relative_dp
     import xcp
     from numpy import unwrap,angle,mean
     from positive import spline_diff,warning
+    from numpy import ndarray
     
     #
     ell,emm = lm
     lmlist = [ (ell,emm) ]
     
     #
-    def template_together_helper( f, mu1=0, mu2=0, mu3=0, mu4=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0 ):
+    def template_together_helper( f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0, nu0=0 ):
         
         # Calculate PhenomXPHM with the input deviations
         # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model. NOTE that we try and except here becuase sometimes the optimization routines can stray outside of the accepted model domain thus causing LAL to throw an error
-        multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
-        # try:
-        #     # print('2>> ',*(mu1, mu2, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2))
-        #     multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
-        # except:
-        #     warning('Something went wrong with the standard evaluation:')
-        #     multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0,**kwargs )
+        
+        # alert(nu0)
+        if isinstance(nu0,(list,tuple,ndarray)):
+            nu0 = nu0[0]
+            
+        # multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
+        
+        try:
+            # print('2>> ',*(mu1, mu2, mu3, mu4, nu0, nu4, nu5, nu6, zeta1, zeta2))
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
+        except:
+            print('n0 = ',nu0)
+            warning('Something went wrong with the standard evaluation:')
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0,**kwargs )
         
         # 
         complex_strain = multipole_dict[ell,ell]
@@ -370,28 +378,29 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2), turn_on_relative_dp
         mask = (f>0.03*ell/2)&(f<0.12*ell/2)
         min_phase_derivative = min( phase_derivative[ mask ] )
         
-        #
-        if not turn_on_relative_dphi_mode:
+        # Adjust phase derivative 
+        if floor_dphi:
+            phase_derivative -= min_phase_derivative 
         
-            # # Adjust phase derivative 
-            # phase_derivative -= min_phase_derivative 
-            # NOTE that we dont want the line above on: we do this so that the internal model offset parameter can be tuned simultaneously with the other parameters, and so that the relative time shift behavior in XHM is undisturbed
-            
-            #
-            return amplitude,phase_derivative
-            
-        else:
-            
-            #
-            return amplitude,phase_derivative,min_phase_derivative
+        #
+        return amplitude,phase_derivative
         
     # We need to acknowledge here that the (2,2) moment is not sensitive to mu4 (and maybe other inputs). We do this by prototyping the waveform function to explicitely ignore mu4 as an input 
-    if ell == 2:
-        # no mu4 and nu0
-        template_together = lambda f, mu1=0, mu2=0, mu3=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=0, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+    
+    if not include_nu0:
+        if ell == 2:
+            # no mu4 
+            template_together = lambda f, mu1=0, mu2=0, mu3=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=0, nu0=0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+        else:
+            # 
+            template_together = lambda f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
     else:
-        # no nu0
-        template_together = lambda f, mu1=0, mu2=0, mu3=0, mu4=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+        if ell == 2:
+            # no mu4 
+            template_together = lambda f, mu1=0, mu2=0, mu3=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0, nu0=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=0, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
+        else:
+            # 
+            template_together = lambda f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0, nu0=0: template_together_helper( f, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2 )
         
         
     #
@@ -645,8 +654,9 @@ def determine_data_fitting_region(raw_data_array, fring, lm=(2,2), floor_dphi=Tr
         
         xlim( f_min*0.9, f_max/0.9)
         ylim( limy(f[calibration_mask],dphi[calibration_mask],dilate=0.1) )
-        alert(simname)
+        
         xscale('log')
+        
         if ax is None: show()
     
     #

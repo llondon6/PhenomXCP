@@ -47,7 +47,7 @@ for ll,mm in gc.lmlist:
 
     # Define data location
     package_dir = parent( xcp.__path__[0] )
-    datadir = package_dir + 'data/version2/'
+    datadir = package_dir + 'data/version4/'
     files = glob( datadir+'*_l%im%i.txt'%(ll,mm) )
     files.sort()
     # files = files[::-1]#

@@ -12,6 +12,11 @@ from xcp import determine_data_fitting_region,calibration_catalog,metadata_dict,
 from numpy.linalg import norm
 from scipy.optimize import curve_fit,minimize,fmin
 
+'''
+NOTE(s) ...
+'''
+
+
 # Let the user know where lalsimulation lives
 
 #
@@ -24,11 +29,18 @@ alert('We are getting our LALSimulation from:\n%s'%magenta(lalsim_path))
 alert('We think that the related lalsuite source files are here:\n%s'%green(lalsuite_repo_path))
 alert('Lastly, we are currently on this branch: %s'%bold(magenta(branch_name)))
 
-# For all pairs of l and m in the global config file
-for ll,mm in gc.lmlist:
+#
+datadir = '/Users/book/KOALA/PhenomXCP/data/version4/'
+data_path = datadir+'calibration_data_dict.pickle'
+calibration_data_dict = pickle.load( open( data_path, "rb" ) )
 
+# For all pairs of l and m in the global config file
+# for ll,mm in [(2,2)]:#gc.lmlist:
+# for ll,mm in gc.lmlist:
+for ll,mm in gc.lmlist:
+        
+        
     #
-    datadir = '/Users/book/KOALA/PhenomXCP/data/version2/'
     files = glob( datadir+'*_l%im%i.txt'%(ll,mm) )
     files.sort()
     files = files[::-1]
@@ -48,7 +60,7 @@ for ll,mm in gc.lmlist:
     files = array(files)[file_map]
         
     reference_index = 0
-    # theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z
+    # theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z, M_final, chi_final
     mask = [0,3,9] # theta, eta, a1 -- the parameters that will be used to calculate distance for sorting
     coordinates = metadata_dict['array_data'][:,mask]
     coordinates[:,0] = cos(coordinates[:,0]) # use cos theta 
@@ -60,9 +72,9 @@ for ll,mm in gc.lmlist:
     #
     if ll==3:
         files = [ f for f in files if 'q1' not in f  ]
-        
-        
-    reverse_index_map = argsort( index_map ).astype(int) # array([ int(c) for c in argsort( index_map ) ]),dtype=int
+
+    # #
+    # files = [ f for f in files if 'q8a08t60' in f ]
 
     # Get number of parameters to be tuned
     scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm))
@@ -83,68 +95,57 @@ for ll,mm in gc.lmlist:
 
     #
     p = 0
-    popt_array  = zeros( (len(files),var_count) )
+    popt_array  = zeros( (len(files),var_count+1) ) # NOTE that the "+1" is for nu0; see code below
     fit_obj_list = []
-    physical_param_array = zeros( (len(files), 17) )
+    physical_param_array = zeros( (len(files), 19) )
     alert('Plotting ...')
     for j,f_ in enumerate(files):
 
         #
         simname = f_.split('/')[-1].split('_l%im%i.'%(ll,mm))[0]
-
-        # Find index location of metadata for simname 
-        k = [ k for k,val in enumerate(metadata_dict['simname']) if val in simname ][0]
-
-        # Load data for this case
-        raw_data = loadtxt(f_).T
-        calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, simname=simname, lm=(ll,mm) )
-
-        # #
-        # dphi_lorentzian_shift = 0 # NOTE that this shift will only be applied to the calibration data
-        # if (ll,mm) != (2,2):
-        #     raw_data_22 = loadtxt( f_.replace('l%im%i'%(ll,mm),'l2m2') ).T
-        #     calibration_data_22, dphi_lorentzian_min_22, f_min_22, f_max_22, f_lorentzian_min_22 = determine_data_fitting_region( raw_data_22, simname=simname, lm=(2,2) )
-        #     # We will shift the phase derivative for the non 22 moment by min_phase_derivative_22 as defined below
-        #     min_phase_derivative_22 = dphi_lorentzian_min_22
         
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* #
+        # Load data that has been processed in issue 3c
+        # ---
+        (metadata,f,dphi_fd,amp_fd,xphm_dphi,dphi_fd_enforced_min,nr_dphi_lm_shift,min_xphm_dphi_l2m2) = calibration_data_dict[ll,mm][simname]
+        #
+        dphi_fd_floored = dphi_fd - dphi_fd_enforced_min
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* #
+
         # Collect params for this case 
-        metadata = metadata_dict['array_data'][k,:]
-
-        #
-        f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
-        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,_,_ = metadata_dict['array_data'][k]
-        
-        #
+        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,Mf,Xf = metadata
         chi1_vec = array([chi1_x,chi1_y,chi1_z])
         chi2_vec = array([chi2_x,chi2_y,chi2_z])
         
         #
-        physical_param_array[j,:] = metadata_dict['array_data'][k]
+        physical_param_array[j,:] = metadata
         
         # Generate PhenomXHM waveform generators that allow for model deviations
-        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm')
+        # NOTE that the phase derivatives output have their min values set to zero
+        action_helper_1 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm',include_nu0=False)
+        # Create version that includes nu0 (NOTE that varcount must be increased by 1 for this object)
+        action_helper_2 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm',include_nu0=True)
+        # Create version that does not set min dphi to zero
+        action_helper_3 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm',include_nu0=True,floor_dphi=False)
         
-        # FIX PHASE DERIVATIVE OFFSET TO THAT OF HXM
-        # NOTE that we do this so that the internal model offset parameter can be tuned simultaneously with the other parameters, and so that the relative time shift behavior in XHM is undisturbed
-        # ---
-        # Calculate default model amp and phase derivative
-        mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
-        #
-        xhm_min_phase_derivative = min(mod_xhm0_dphi)
-        # NOTE that dphi_fd has a min that is manually set to zero in determine_data_fitting_region(). HERE we enforce that the calibration data has the same min as XHM
-        dphi_fd += xhm_min_phase_derivative
+        # ######################################################### #
+        # NOTE that the waveform is tuned relative to XHM but the relative locations are tuned relative to XPHM (see issue 3c script)
+        # ######################################################### #
         
         # GENERATE TEMPLATE FUNCTIONS
         # ---
-        def action( p, verbose=False, output_vars=False ):
+        def action( p, verbose=False, output_vars=False, modeling_phase = 1 ):
             
             #
-            amplitude,phase_derivative = action_helper( f, *p )
+            amplitude,phase_derivative = action_helper_1( f, *p ) if modeling_phase==1 else action_helper_3( f, *p )
+            
+            #
+            calibration_dphi = dphi_fd_floored if modeling_phase==1 else dphi_fd
             
             # -- Calculate residual of phase derivative -- #
             # phase_derivative -= min(phase_derivative)
             # NOTE that we do not shift the phase derivative as suggested above because we have enforced that  min(dphi_fd) == xhm_min_phase_derivative
-            residual_phase_derivative = sum((dphi_fd - phase_derivative)**2) / std(dphi_fd)
+            residual_phase_derivative = sum((calibration_dphi - phase_derivative)**2) / std(dphi_fd_floored)
             # -- Calculate residual of amplitude --------- #
             amp_scale = f ** (7.0/6)
             inv_amp_scale = f ** (-7.0/6)
@@ -162,11 +163,35 @@ for ll,mm in gc.lmlist:
         # PERFORM FIT
         # --- 
         
-        # Perform fit 
+        # Perform fit -- PHASE 1: Do not include dphi offset parameter nu0
         # # NOTE that carrying forward previous solutions as initial guesses causes problems UNLESS the simulations are distance sorted as can be seen above
-        guess = zeros(var_count) #if j==0 else foo[1]
-        foo = minimize( action, guess )
-        foo = (foo.fun,foo.x)
+        # --- parameters for dphi shape and amp, not dphi shift
+        guess_1 = zeros(var_count) #if j==0 else foo[1]
+        foo_shape = minimize( lambda p: action(p,modeling_phase=1), guess_1 )
+        foo_shape = (foo_shape.fun,foo_shape.x)
+        
+        #
+        best_shape_popt = list(foo_shape[1]) + [0]
+        best_shape_fit_amp,best_shape_fit_dphi = action_helper_3( f, *best_shape_popt )
+        
+        #
+        if ll == 2:
+            dev_parameter = a1 * sin(theta) 
+        if ll == 3:
+            dev_parameter = a1 * sin(theta) * delta 
+        
+        final_dphi_shidt_opt = (dphi_fd_enforced_min-min(best_shape_fit_dphi))# if ll==2 else mean(dphi_fd-best_shape_fit_dphi)
+        nu0_opt_guess = final_dphi_shidt_opt / dev_parameter
+        
+        # # Perform fit -- PHASE 2: Optimize over nu0 ONLY
+        # # --- parameter for dphi shift
+        # guess_2 = nu0_opt_guess #if j==0 else foo[1]
+        # foo_shift = minimize( lambda p: action(list(guess_1) + [ p ],modeling_phase=2), guess_2 )
+        # foo_shift = (foo_shift.fun,foo_shift.x)
+        #
+        foo = list(foo_shape)
+        nu0_opt = nu0_opt_guess # foo_shift[1][0]
+        foo[1] = list(foo_shape[1]) + list([nu0_opt])
         
         
         # foos, boundary_par = jac_sort_minimize(action,var_count, verbose=True, initial_guess=guess)
@@ -174,10 +199,15 @@ for ll,mm in gc.lmlist:
         # foo = foos[ argmin( [ f[0] for f in foos ] ) ]
         
         #
-        best_fit_amp,best_fit_dphi = action_helper( f, *foo[1] )
+        alert('Calling best fit waveform (%f) '%final_dphi_shidt_opt)
+        best_fit_amp,best_fit_dphi = action_helper_3( f, *foo[1] )
+        alert('END of calling best fit waveform ')
+        # best_fit_dphi += nu0_opt
         
         # Store fit params and cov 
         alert(simname,header=True)
+        # print('~> ',theta,delta,a1)
+        print('>> ',simname,nu0_opt,nu0_opt_guess)
         alert(foo[1],header=False)
         popt_array[j,:] = foo[1]
         fit_obj_list.append( foo )
@@ -185,10 +215,17 @@ for ll,mm in gc.lmlist:
         # PLOTTING
         # ---
         
+        # Calculate default model amp and phase derivative
+        xhm_amp,xhm_dphi = action_helper_3(f)
+        
         #
         sca(ax[p]); p+=1
         plot( f, dphi_fd, label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
-        plot( f, mod_xhm0_dphi, label='PhenomXHM', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
+        
+        plot( f, xphm_dphi, label='PhenomXPHM', ls=':', lw=1, alpha=0.85, color='tab:blue', zorder=-10 )
+        
+        plot( f, xhm_dphi, label='PhenomXHM', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
+        
         plot( f, best_fit_dphi, label='Best Fit', color='r', ls='-' )
         xscale('log')
         xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
@@ -199,10 +236,13 @@ for ll,mm in gc.lmlist:
         xlabel('$fM$')
         title(simname,loc='left',size=12)
         
+        axhline(0,ls=':',color='k')
+        axhline(min_xphm_dphi_l2m2,ls='--',color='green')
+        
         #
         sca(ax[p]); p+=1
         plot( f, amp_fd, label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
-        plot( f, mod_xhm0_amp, label='PhenomXHM', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
+        plot( f, xhm_amp, label='PhenomXHM', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
         plot( f, best_fit_amp, label='Best Fit', color='r', ls='-' )
         yscale('log')
         xscale('log')
@@ -221,11 +261,6 @@ for ll,mm in gc.lmlist:
     alert('Saving batch plot to %s'%magenta(file_path))
     savefig(file_path,pad_inches=2, bbox_inches = "tight")
     alert('Done.')
-
-    # #
-    # physical_param_array = physical_param_array[ reverse_index_map,: ]
-    # popt_array = popt_array[ reverse_index_map,: ]
-    # fit_obj_list  = list(array(fit_obj_list)[ reverse_index_map ])
 
     # SAVE FIT DATA
     # --

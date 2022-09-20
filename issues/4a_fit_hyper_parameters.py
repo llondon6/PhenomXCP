@@ -19,11 +19,11 @@ alert('Loading parameter space data.')
 
 # Define data location
 package_dir = parent( xcp.__path__[0] )
-datadir = package_dir + 'data/version2/'
+datadir = package_dir + 'data/version4/'
 
 # Load and unpuack physical parameter space
-raw_domain = loadtxt(datadir+'fit_initial_binary_parameters.txt')
-theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = raw_domain.T
+raw_domain = loadtxt(datadir+'fit_initial_binary_parameters_l2m2.txt')
+theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,Mf,Xf = raw_domain.T
 
 
 # Define desired model domain variables and array 
@@ -35,7 +35,7 @@ for ll,mm in gc.lmlist:
 
     # Load and unpack physical parameter space
     opt_parameter_range = loadtxt(datadir+'fit_opt_parameters_l%im%i.txt'%(ll,mm))
-    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm))
+    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm),include_nu0=True,floor_dphi=False)
     parameter_names_in_order = scarecrow.__code__.co_varnames[1:scarecrow.__code__.co_argcount]
     model_range = {  parameter_names_in_order[k]:var for k,var in enumerate(opt_parameter_range.T) }
     # if ll==2:
@@ -87,7 +87,7 @@ for ll,mm in gc.lmlist:
             mass_ratio_quantity_order = 3
         else:
             #
-            u_order = 3
+            u_order = 4 # 3
             a1_order = 3
             mass_ratio_quantity_order = 2
         

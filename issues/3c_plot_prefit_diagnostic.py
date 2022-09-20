@@ -33,6 +33,8 @@ alert('Lastly, we are currently on this branch: %s'%bold(magenta(branch_name)))
 from numpy.linalg import norm
 from scipy.optimize import curve_fit
 
+#
+calibration_data_dict = {}
 
 #
 datadir = '/Users/book/KOALA/PhenomXCP/data/version4/'
@@ -43,6 +45,9 @@ dphi_shift_dict_l2m2 = { simname:0 for simname in dphi_shift_dict_l3m3 }
 
 # For all pairs of l and m in the global config file
 for ll,mm in gc.lmlist:
+    
+    #
+    calibration_data_dict[ll,mm] = {}
 
     #
     files = glob( datadir+'*_l%im%i.txt'%(ll,mm) )
@@ -79,36 +84,32 @@ for ll,mm in gc.lmlist:
         simname = f_.split('/')[-1].split('_l%im%i.'%(ll,mm))[0]
 
         # Find index location of metadata for simname 
-        alert(simname)
         k = [ k for k,val in enumerate(metadata_dict['simname']) if val in simname ][0]
 
-        # Collect params for this case 
-        metadata = metadata_dict['array_data'][k,:]
-
-        #
         # Collect params for this case 
         theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,Mf,Xf = metadata_dict['array_data'][k,:]
         chi1_vec = array([chi1_x,chi1_y,chi1_z])
         chi2_vec = array([chi2_x,chi2_y,chi2_z])
-        #dphi_fd -= min( dphi_fd[ (f>0.03)&(f<0.12) ] )
-        
-        #
-        qnmo_p = qnmobj( Mf, Xf, ll, mm,0,p=1,use_nr_convention=True,verbose=False,calc_slm=False,calc_rlm=False )
-        fring  = qnmo_pr.CW.real / (2*pi)
 
+        # ****************************** #
+        # Determine data fitting region  #
+        # ****************************** #
+        # Load QNM info
+        qnmo_p = qnmobj( Mf, Xf, ll, mm,0,p=1,use_nr_convention=True,verbose=False,calc_slm=False,calc_rlm=False )
+        fring  = qnmo_p.CW.real / (2*pi)
         # Load data for this case
         raw_data = loadtxt(f_).T
-        calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, fring, lm=(ll,mm), floor_dphi=True, plot=True, simname=simname)
+        calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, fring, lm=(ll,mm), floor_dphi=True, plot=not True, simname=simname)
         
         #
         f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
         
         # tell the XCP package to generate a PhenomXPHM waveform
-        action_helper_l2m2 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(2,2),option_shorthand='2-xphm')
-        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='2-xphm')
+        action_helper_l2m2 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(2,2),option_shorthand='2-xphm',floor_dphi=False)
+        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='2-xphm',floor_dphi=False)
         # action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm))
-        mod_xhm0_amp_l2m2,mod_xhm0_dphi_l2m2 = action_helper_l2m2(f)
-        mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
+        _,xphm_dphi_l2m2 = action_helper_l2m2(f)
+        xphm_amp,xphm_dphi = action_helper(f)
         
         
         ''' 
@@ -123,12 +124,12 @@ for ll,mm in gc.lmlist:
         '''
         
         #
-        min_mod_xhm0_dphi_l2m2 = min(mod_xhm0_dphi_l2m2)
-        # dphi_fd += min_mod_xhm0_dphi_l2m2
+        min_xphm_dphi_l2m2 = min(xphm_dphi_l2m2)
         
         # 
-        dphi_fd_enforced_min = dphi_shift_dict[simname] if not ('q1' in simname) else 0
-        dphi_fd += min_mod_xhm0_dphi_l2m2 + dphi_fd_enforced_min
+        nr_dphi_lm_shift = dphi_shift_dict[simname] if not ('q1' in simname) else 0
+        dphi_fd_enforced_min = min_xphm_dphi_l2m2 + nr_dphi_lm_shift
+        dphi_fd += dphi_fd_enforced_min
         
         
         # print('** ',simname)
@@ -157,31 +158,42 @@ for ll,mm in gc.lmlist:
         # PLOTTING
         # ---
 
+        # &%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&% #
+        #           Store all useful data for output         #
+        calibration_data_dict[ll,mm][simname] = (metadata_dict['array_data'][k,:],f,dphi_fd,amp_fd,xphm_dphi,dphi_fd_enforced_min,nr_dphi_lm_shift,min_xphm_dphi_l2m2)
+        # &%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&% #
+
         #
         sca(ax[p]); p+=1
         plot( f, dphi_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
         plot( f, xhm_dphi, label='PhenomXHM', ls=':',lw=2,alpha=0.85,color='k' )
         plot( f, mod_xhm_dphi, label='PhenomXPHM(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
-        plot( f, mod_xhm0_dphi, label='PhenomXPHM', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+        plot( f, xphm_dphi, label='PhenomXPHM', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+        
         # xscale('log')
-        xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
-        ylim( limy(f, mod_xhm_dphi,dilate=0.1) )
+        #xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
+        xlim( max(f)*0.7,max(f) )
+        
+        # ylim( limy(f, mod_xhm_dphi,dilate=0.1) )
+        yl = lim(list(limy(f,dphi_fd,dilate=0.1)) + list(limy(f,xhm_dphi,dilate=0.1)) + list(limy(f,mod_xhm_dphi,dilate=0.1)) + list(limy(f,xphm_dphi,dilate=0.1)))
+        ylim( yl )
+        
         title(simname,size=12,loc='left')
-        legend(ncol=2,loc=1)
         ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{22})$')
         xlabel('$fM$')
-        title(simname,loc='left',size=12)
-        axhline(0,ls='--',color='k',alpha=0.7)
-        # axhline(dphi_fd_enforced_min,ls='--',color='k',alpha=0.7)
+        title(simname+', nr_dphi_lm_shift: %f'%nr_dphi_lm_shift,loc='left',size=12)
+        # axhline(0,ls='--',color='k',alpha=0.7)
+        if ll!=2: axhline(min_xphm_dphi_l2m2,ls=':',color='k',alpha=0.7,label='XPHM $(2,2)$ Min')
         #
-        axhline(min_mod_xhm0_dphi_l2m2,c='tab:green',ls='--')
-        alert(min_mod_xhm0_dphi_l2m2)
+        axhline(dphi_fd_enforced_min,c='tab:green',ls='--',label='NR Relative Value' if ll==3 else 'XPHM Relative Value')
+        # alert(dphi_fd_enforced_min)
+        legend(ncol=2,loc=1)
 
         sca(ax[p]); p+=1
         plot( f, amp_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
         plot( f, xhm_amp, label='PhenomXHM', ls=':',lw=2,alpha=0.85,color='k' )
         plot( f, mod_xhm_amp, label='PhenomXPHM(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
-        plot( f, mod_xhm0_amp, label='PhenomXPHM', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
+        plot( f, xphm_amp, label='PhenomXPHM', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
         yscale('log')
         xscale('log')
         legend(ncol=2)
@@ -197,3 +209,8 @@ for ll,mm in gc.lmlist:
     alert('Saving batch plot to %s'%magenta(file_path))
     savefig(file_path,pad_inches=2, bbox_inches = "tight")
     alert('Done.')
+
+#
+data_path = datadir+'calibration_data_dict.pickle'
+alert('Saving calibration_data_dict to %s'%magenta(data_path))
+pickle.dump( calibration_data_dict, open( data_path, "wb" ) )
