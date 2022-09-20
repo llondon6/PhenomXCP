@@ -24,6 +24,12 @@ alert('We are getting our LALSimulation from:\n%s'%magenta(lalsim_path))
 alert('We think that the related lalsuite source files are here:\n%s'%green(lalsuite_repo_path))
 alert('Lastly, we are currently on this branch: %s'%bold(magenta(branch_name)))
 
+
+#
+datadir = '/Users/book/KOALA/PhenomXCP/data/version4/'
+data_path = datadir+'calibration_data_dict.pickle'
+calibration_data_dict = pickle.load( open( data_path, "rb" ) )
+
 #
 if branch_name != 'pnrv1-ll':
     alert('We are not on the expected branch. This may cause unexpected behavior.',say=not True)
@@ -47,7 +53,6 @@ for ll,mm in gc.lmlist:
 
     # Define data location
     package_dir = parent( xcp.__path__[0] )
-    datadir = package_dir + 'data/version4/'
     files = glob( datadir+'*_l%im%i.txt'%(ll,mm) )
     files.sort()
     # files = files[::-1]#
@@ -107,26 +112,34 @@ for ll,mm in gc.lmlist:
 
         #
         simname = f_.split('/')[-1].split('_l%im%i.'%(ll,mm))[0]
+        
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* #
+        # Load data that has been processed in issue 3c
+        # ---
+        (metadata,f,dphi_fd,amp_fd,xphm_dphi,dphi_fd_enforced_min,nr_dphi_lm_shift,min_xphm_dphi_l2m2) = calibration_data_dict[ll,mm][simname]
+        #
+        dphi_fd_floored = dphi_fd - dphi_fd_enforced_min
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* #
 
-        # Find index location of metadata for simname 
-        k = [ k for k,val in enumerate(metadata_dict['simname']) if val in simname ][0]
+        # # Find index location of metadata for simname 
+        # k = [ k for k,val in enumerate(metadata_dict['simname']) if val in simname ][0]
 
-        # Load data for this case
-        raw_data = loadtxt(f_).T
+        # # Load data for this case
+        # raw_data = loadtxt(f_).T
         alert(simname)
-        calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, simname=simname, lm=(ll,mm) )
+        # calibration_data, dphi_lorentzian_min, f_min, f_max, f_lorentzian_min = determine_data_fitting_region( raw_data, simname=simname, lm=(ll,mm) )
 
-        # Collect params for this case 
-        metadata = metadata_dict['array_data'][k,:]
+        # # Collect params for this case 
+        # metadata = metadata_dict['array_data'][k,:]
 
         #
-        f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
-        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z = metadata_dict['array_data'][k]
+        # f,amp_fd,dphi_fd,alpha,beta,gamma = calibration_data.T
+        theta,m1,m2,eta,delta,chi_eff,chi_p,chi1,chi2,a1,a2,chi1_x,chi1_y,chi1_z,chi2_x,chi2_y,chi2_z,Mf,Xf = metadata
         chi1_vec = array([chi1_x,chi1_y,chi1_z])
         chi2_vec = array([chi2_x,chi2_y,chi2_z])
         
         #
-        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm), option_shorthand='4-xhm')
+        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm), option_shorthand='4-xhm',include_nu0=True,floor_dphi=False)
         mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
         
         #
@@ -134,13 +147,13 @@ for ll,mm in gc.lmlist:
         opt_amp,opt_dphi = action_helper(f,*popt)
         
         #
-        (mu1_l2m2,mu2_l2m2,mu3_l2m2,nu4_l2m2,nu5_l2m2,nu6_l2m2,zeta1_l2m2,zeta2_l2m2,mu1_l3m3,mu2_l3m3,mu3_l3m3,mu4_l3m3,nu4_l3m3,nu5_l3m3,nu6_l3m3,zeta1_l3m3,zeta2_l3m3) = generate_model_params(theta,eta,a1)
+        (mu1_l2m2,mu2_l2m2,mu3_l2m2,nu4_l2m2,nu5_l2m2,nu6_l2m2,zeta1_l2m2,zeta2_l2m2,nu0_l2m2,mu1_l3m3,mu2_l3m3,mu3_l3m3,mu4_l3m3,nu4_l3m3,nu5_l3m3,nu6_l3m3,zeta1_l3m3,zeta2_l3m3,nu0_l3m3) = generate_model_params(theta,eta,a1)
         if ll == 2:
-            ppy = (mu1_l2m2,mu2_l2m2,mu3_l2m2,nu4_l2m2,nu5_l2m2,nu6_l2m2,zeta1_l2m2,zeta2_l2m2)
+            ppy = (mu1_l2m2,mu2_l2m2,mu3_l2m2,nu4_l2m2,nu5_l2m2,nu6_l2m2,zeta1_l2m2,zeta2_l2m2,nu0_l2m2)
         else:
-            ppy = (mu1_l3m3,mu2_l3m3,mu3_l3m3,mu4_l3m3,nu4_l3m3,nu5_l3m3,nu6_l3m3,zeta1_l3m3,zeta2_l3m3)
+            ppy = (mu1_l3m3,mu2_l3m3,mu3_l3m3,mu4_l3m3,nu4_l3m3,nu5_l3m3,nu6_l3m3,zeta1_l3m3,zeta2_l3m3,nu0_l3m3)
         py_amp,py_dphi = action_helper(f,*ppy)
-        py_dphi -= min(py_dphi)
+        # py_dphi -= min(py_dphi)
         
         #
         mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f,lmlist, m1, m2, chi1_vec, chi2_vec, option_shorthand='2-xphm' )
@@ -148,7 +161,7 @@ for ll,mm in gc.lmlist:
         mod_xhm_amp = abs(mod_xhm)
         mod_xhm_phi = unwrap( angle(mod_xhm) )
         mod_xhm_dphi = spline_diff(f,mod_xhm_phi)
-        mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03*ll*0.5)&(f<0.12*ll*0.5) ] )
+        # mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03*ll*0.5)&(f<0.12*ll*0.5) ] )
         # mod_xhm_dphi -= mean( mod_xhm_dphi )
         
         #
@@ -157,7 +170,7 @@ for ll,mm in gc.lmlist:
         tuned_xhm_amp = abs(tuned_xhm)
         tuned_xhm_phi = unwrap( angle(tuned_xhm) )
         tuned_xhm_dphi = spline_diff(f,tuned_xhm_phi)
-        tuned_xhm_dphi -= min( tuned_xhm_dphi[ (f>0.03*ll*0.5)&(f<0.12*ll*0.5) ] )
+        # tuned_xhm_dphi -= min( tuned_xhm_dphi[ (f>0.03*ll*0.5)&(f<0.12*ll*0.5) ] )
         # tuned_xhm_dphi -= mean( tuned_xhm_dphi )
 
         # PLOTTING

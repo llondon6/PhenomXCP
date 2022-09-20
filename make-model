@@ -48,7 +48,7 @@ $basedir/5a_plot_postfit_diagnostic.py
 # $basedir/4b_make_fit_diagnostic_plots.py
 $basedir/5b_plot_extrapolation_a1_diagnostic.py
 $basedir/5c_plot_extrapolation_q_diagnostic.py
-$basedir/5d_plot_extrapolation_theta_diagnostic.py
+# $basedir/5d_plot_extrapolation_theta_diagnostic.py
 
 # Exit Conda env
 # conda deactivate
