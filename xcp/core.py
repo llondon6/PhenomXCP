@@ -135,12 +135,12 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
     import lal
     
     #
+    # #
+    # if len(lmlist)>1:
+    #     error('this function only works with one mode input! otherwise there is an issue')
     #
-    if len(lmlist)>1:
-        error('this function only works with one mode input! otherwise there is an issue')
-    #
-    lm = lmlist[0]
-    ll,mm = lm
+    # lm = lmlist[0]
+    # ll,mm = lm
             
     #
     option_shorthand_strings =  ('1-pnr','2-xphm','3-xphm-ezh','4-xhm')
@@ -261,7 +261,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         # Set deviations from base model based on inputs
         # mu2,mu3,mu4,nu4,nu5,nu6,zeta2 = [ double(k) for k in (mu2,mu3,mu4,nu4,nu5,nu6,zeta2) ]
         # print('3>> ',*(mu1, mu2, mu3, mu4, nu4, nu5, nu6, zeta1, zeta2),'\n')
-        if (l,m) == (2,2):
+        if (l,m) in [(2,2),(2,-2)]:
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU1(lalparams, mu1)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2(lalparams, mu2)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU3(lalparams, mu3)
@@ -272,7 +272,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPNU6(lalparams, nu6)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA1(lalparams, zeta1)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA2(lalparams, zeta2)
-        elif (l,m) == (3,3):
+        elif (l,m) in [(3,3),(3,-3)]:
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU1l3m3(lalparams, mu1)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU2l3m3(lalparams, mu2)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPMU3l3m3(lalparams, mu3)

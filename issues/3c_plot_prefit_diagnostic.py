@@ -179,7 +179,7 @@ for ll,mm in gc.lmlist:
         ylim( yl )
         
         title(simname,size=12,loc='left')
-        ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{22})$')
+        ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{%i%i})$'%(ll,mm))
         xlabel('$fM$')
         title(simname+', nr_dphi_lm_shift: %f'%nr_dphi_lm_shift,loc='left',size=12)
         # axhline(0,ls='--',color='k',alpha=0.7)
@@ -199,7 +199,7 @@ for ll,mm in gc.lmlist:
         legend(ncol=2)
         ylim( limy(f, amp_fd,dilate=1.2) )
         xlabel('$fM$')
-        ylabel(r'$|\tilde{h}_{22}(f)|$')
+        ylabel(r'$|\tilde{h}_{%i%i}(f)|$'%(ll,mm))
         #
         title(simname,loc='left',size=12)
             
