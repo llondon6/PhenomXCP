@@ -117,7 +117,7 @@ for ll,mm in gc.lmlist:
             passed_state.append( state )
 
             #
-            action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm')
+            action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='5-xhm-tuning')
             xhm_amp,xhm_dphi = action_helper(f)
             xhm_dphi -= min(xhm_dphi)
 

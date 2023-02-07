@@ -27,8 +27,8 @@ basedir=/Users/book/KOALA/PhenomXCP/issues
 
 # Fit model parameters across physical parameter space and then document
 # --
-$basedir/4a_fit_hyper_parameters.py
-$basedir/4c_convert_fits_to_code.py
+# $basedir/4a_fit_hyper_parameters.py
+# $basedir/4c_convert_fits_to_code.py
 
 # Make backup of relevant LALSimulation files 
 cp "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c_backup"
@@ -46,9 +46,9 @@ cd $refdir
 # --
 $basedir/5a_plot_postfit_diagnostic.py
 # $basedir/4b_make_fit_diagnostic_plots.py
-$basedir/5b_plot_extrapolation_a1_diagnostic.py
-$basedir/5c_plot_extrapolation_q_diagnostic.py
+# $basedir/5b_plot_extrapolation_a1_diagnostic.py
+# $basedir/5c_plot_extrapolation_q_diagnostic.py
 # $basedir/5d_plot_extrapolation_theta_diagnostic.py
 
 # Exit Conda env
-# conda deactivate
+conda deactivate

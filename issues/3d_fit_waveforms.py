@@ -122,11 +122,11 @@ for ll,mm in gc.lmlist:
         
         # Generate PhenomXHM waveform generators that allow for model deviations
         # NOTE that the phase derivatives output have their min values set to zero
-        action_helper_1 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm',include_nu0=False)
+        action_helper_1 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='5-xhm-tuning',include_nu0=False)
         # Create version that includes nu0 (NOTE that varcount must be increased by 1 for this object)
-        action_helper_2 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm',include_nu0=True)
+        action_helper_2 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='5-xhm-tuning',include_nu0=True)
         # Create version that does not set min dphi to zero
-        action_helper_3 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='4-xhm',include_nu0=True,floor_dphi=False)
+        action_helper_3 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm),option_shorthand='5-xhm-tuning',include_nu0=True,floor_dphi=False)
         
         # ######################################################### #
         # NOTE that the waveform is tuned relative to XHM but the relative locations are tuned relative to XPHM (see issue 3c script)

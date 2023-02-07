@@ -101,7 +101,7 @@ def get_xphm_coprec(ell, emm, Mtotal, q, chi1, chi2, pnr=False):
     return freqs, hlmpos.data.data, hlmneg.data.data
 
 #
-def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=0, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0,__set_XPHMThresholdMband__=True, option_shorthand=None ):
+def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=0, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0,__set_XPHMThresholdMband__=True, option_shorthand=None, output_phase_from_lal = False ):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -143,7 +143,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
     # ll,mm = lm
             
     #
-    option_shorthand_strings =  ('1-pnr','2-xphm','3-xphm-ezh','4-xhm')
+    option_shorthand_strings =  ('1-pnr','2-xphm','4-xhm','5-xhm-tuning')
     
     #
     if option_shorthand:
@@ -153,38 +153,42 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
             option_shorthand = option_shorthand.lower()
         else:
             error('option shorthand key value must be string')
-        #
-        if not (option_shorthand in option_shorthand_strings):
-            error('option shorthand key value should be in %s'%magenta(option_shorthand_strings))
+        # #
+        # if not (option_shorthand in option_shorthand_strings):
+        #     error('option shorthand key value should be in %s'%magenta(option_shorthand_strings))
             
         #
         # alert('Valid option-shorthand input found. We will now overwrite Phenom-X options according to %s'%option_shorthand)
         
+        UseTunedCoprec = 0
+        UseInputCoprecDeviations = 0
         if   option_shorthand == '1-pnr':
             
             #
-            pflag = 500 # Use XCP which is XAS or XHM with select deviations in model parameters
-            fsflag = 0 # Use default behavior for XPHM
+            UseTunedCoprec = 1
             
         elif option_shorthand == '2-xphm':
             
-            #
-            pflag = 0 # Use default PhenomXPHM behavior
-            fsflag = 0 # Use default behavior for XPHM
-            
-        elif option_shorthand == '3-xphm-ezh':
-            
-            #
-            pflag = 501  # Use EZH's effective ringdown frequency for dominant multipole moments
-            fsflag = 0 # Use default behavior for XPHM
-            # alert('(l,m) = (%i,%i), pflag = %i'%(ll,mm,pflag))
+            # Default behavior
+            None
             
         elif option_shorthand == '4-xhm':
             
-            # NOTE see use of fsflag in LALSimIMRPhenomX_precession.c
-            fsflag = 5 # Tells XP interface to use non-spinning fit for remnant BH
-            pflag = 0 # Use default PhenomXPHM behavior
-            # alert('(l,m) = (%i,%i), pflag = %i, fsflag = %i'%(ll,mm,pflag,fsflag))
+            # Trigger XHM by removing in-plane spin components
+            
+            # Copy spin array objects
+            s1 = s1.copy()
+            s2 = s2.copy()
+            
+            # Set in-plane components to zero
+            s1[0]=s1[1]=0
+            s2[0]=s2[1]=0
+            
+        elif option_shorthand == '5-xhm-tuning':
+            
+            # Enforce that the final spin is the non-precessing version
+            UseTunedCoprec = 0
+            UseInputCoprecDeviations = 1
             
         else:
             
@@ -226,10 +230,6 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
 
     # Main routine 
     # ---
-    
-    
-    #
-    lalparams = lal.CreateDict()
 
     #
     output_modes = {}
@@ -239,6 +239,10 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         
         #
         l,m = lm
+        
+        #
+        if m<0:
+            error('This function only handles m>0. It can work for m<0 cases, but only zeros are output.')
         
         # alert('(l,m) = (%i,%i), pflag = %i, fsflag = %i'%(l,m,pflag,fsflag))
         
@@ -250,8 +254,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
 
         # Turn off multibanding
         lalsim.SimInspiralWaveformParamsInsertPhenomXHMThresholdMband(lalparams, 0)
-        if __set_XPHMThresholdMband__:
-            lalsim.SimInspiralWaveformParamsInsertPhenomXPHMThresholdMband(lalparams, 0)
+        lalsim.SimInspiralWaveformParamsInsertPhenomXPHMThresholdMband(lalparams, 0)
 
         # Tell the model to return the coprecessing mode -- only works on our development branches
         lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, 1)
@@ -284,21 +287,24 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA1l3m3(lalparams, zeta1)
             lalsim.SimInspiralWaveformParamsInsertPhenomXCPZETA2l3m3(lalparams, zeta2)
         else:
-            error('(%i,%i) unhandled for deviations relative to PhenomXHM'%(l,m))
+            warning('(%i,%i) unhandled for deviations relative to PhenomXHM'%(l,m))
         
-        #
-        '''
-        The default value in this function is pflag=0 (see function def above). This value does not equate to True, so the true default behavior is set in LALSuite; i.e. the LAL code sets its own default value for the pflag which is 300 (see LALSimInspiralWaveformParams.c at DEFINE_ISDEFAULT_FUNC(PhenomXPrecVersion, INT4, "PrecVersion", 300). NOTE that pflag is then set to a new default value of 223 in LALSimIMRPhenomX_precession.c.   )
-        '''
-        if pflag:
-            lalsim.SimInspiralWaveformParamsInsertPhenomXPrecVersion( lalparams, pflag )
+        # Set toggle for use of tuned coprecessing model version that already exists within LAL
+        lalsim.SimInspiralWaveformParamsInsertPhenomXPNRUseTunedCoprec(lalparams,UseTunedCoprec)
+        
+        # Set toggle for forced use of non-precessing final spin. This is needed when tuning the coprecessing frame relative to XHM
+        lalsim.SimInspiralWaveformParamsInsertPhenomXPNRUseInputCoprecDeviations(lalparams,UseInputCoprecDeviations)
+        
+        # Set toggle for use of tuned PNR angles to OFF
+        lalsim.SimInspiralWaveformParamsInsertPhenomXPNRUseTunedAngles(lalparams,0)
+        
         #     alert('pflag is effectively True and set to %i'%pflag)
         # else:
         #     alert('pflag is to the effect of False, so pflag will simply not be set in the lasagna (aka laldict)')
         
-        '''Only set the final spin flag is the user desires a non-trivial value'''
-        if fsflag:
-            lalsim.SimInspiralWaveformParamsInsertPhenomXPFinalSpinMod( lalparams, fsflag )
+        #
+        if output_phase_from_lal:
+            lalsim.SimInspiralWaveformParamsInsertPhenomXOnlyReturnPhase(lalparams,1)
 
         #
         distance_Mpc= 100.0
@@ -307,22 +313,30 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         m2_SI = lal.MSUN_SI*M2
         chi1x, chi1y, chi1z = s1
         chi2x, chi2y, chi2z = s2
-        fRef_In = 0
+        fRef_In = 0.0
+        
+        #
+        # print(freqs_Hz.data[1]-freqs_Hz.data[0], m1_SI, m2_SI, chi1x, chi1y, chi1z, chi2x, chi2y, chi2z, distance_SI, 0, phiRef, fRef_In, lalparams)
         
         #
         Hp, Hc = lalsim.SimIMRPhenomXPHMFrequencySequence( freqs_Hz, m1_SI, m2_SI, chi1x, chi1y, chi1z, chi2x, chi2y, chi2z, distance_SI, 0, phiRef, fRef_In, lalparams)
+            
 
         #
         hp = Hp.data.data
         hc = Hc.data.data
         
         #
-        hp = codehf(hp,Mtot,distance_Mpc)
-        hc = codehf(hc,Mtot,distance_Mpc)
+        if not output_phase_from_lal:
+            hp = codehf(hp,Mtot,distance_Mpc)
+            hc = codehf(hc,Mtot,distance_Mpc)
         
         #
-        output_modes[l,m] = hp + 1j * hc
-
+        if not output_phase_from_lal:
+            output_modes[l,m] = hp + 1j * hc
+        else:
+            # if outputting phase, there should only be a real part, and hc should be zero
+            output_modes[l,m] = hp.real
     #
     return output_modes
 
@@ -330,7 +344,6 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
 #
 def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),include_nu0=False,floor_dphi=True,**kwargs):
     
-    # NOTE that mu4 is no longer to be used as it is completely degenerate with nu5 in PhenomX
     
     #
     import xcp
@@ -352,15 +365,15 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),include_nu0=False,fl
         if isinstance(nu0,(list,tuple,ndarray)):
             nu0 = nu0[0]
             
-        # multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
+        # multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
         
         try:
             # print('2>> ',*(mu1, mu2, mu3, mu4, nu0, nu4, nu5, nu6, zeta1, zeta2))
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, mu1=mu1, mu2=mu2, mu3=mu3, mu4=mu4, nu0=nu0, nu4=nu4, nu5=nu5, nu6=nu6, zeta1=zeta1, zeta2=zeta2,**kwargs )
         except:
             print('n0 = ',nu0)
             warning('Something went wrong with the standard evaluation:')
-            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec, pflag=0,**kwargs )
+            multipole_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, lmlist, m1, m2, chi1_vec, chi2_vec,option_shorthand='4-xhm' )
         
         # 
         complex_strain = multipole_dict[ell,ell]

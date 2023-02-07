@@ -132,8 +132,8 @@ for ll,mm in [ lm for lm in gc.lmlist if lm != (2,2)]:
         chi2_vec = array([chi2_x,chi2_y,chi2_z])
         
         #
-        action_helper_22 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(2,2), option_shorthand='4-xhm',turn_on_relative_dphi_mode=True)
-        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm), option_shorthand='4-xhm',turn_on_relative_dphi_mode=True)
+        action_helper_22 = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(2,2), option_shorthand='5-xhm-tuning',turn_on_relative_dphi_mode=True)
+        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm), option_shorthand='5-xhm-tuning',turn_on_relative_dphi_mode=True)
         #
         mod_xhm0_amp_22,mod_xhm0_dphi_22,mod_xhm0_min_dphi_22 = action_helper_22(f)
         mod_xhm0_amp,mod_xhm0_dphi,mod_xhm0_min_dphi          = action_helper(f)

@@ -138,17 +138,17 @@ for ll,mm in gc.lmlist:
         # print('>> ',sum(dphi_shift_dict.values()))
         # error()
         
-        # EZH effective ringdown 
-        mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, [(ll,mm)], m1, m2, chi1_vec, chi2_vec, option_shorthand='3-xphm-ezh' )
-        # mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, [(ll,mm)], m1, m2, chi1_vec, chi2_vec, pflag= 501 if ll==2 else 500, fsflag=None )
-        mod_xhm = mod_xhm_dict[ll,mm]
-        mod_xhm_amp = abs(mod_xhm)
-        mod_xhm_phi = unwrap( angle(mod_xhm) )
-        mod_xhm_dphi = spline_diff(f,mod_xhm_phi)
-        # mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03*ll/2)&(f<0.12*ll/2) ] )
+        # # EZH effective ringdown 
+        # mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, [(ll,mm)], m1, m2, chi1_vec, chi2_vec, option_shorthand='3-xphm-ezh' )
+        # # mod_xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, [(ll,mm)], m1, m2, chi1_vec, chi2_vec, pflag= 501 if ll==2 else 500, fsflag=None )
+        # mod_xhm = mod_xhm_dict[ll,mm]
+        # mod_xhm_amp = abs(mod_xhm)
+        # mod_xhm_phi = unwrap( angle(mod_xhm) )
+        # mod_xhm_dphi = spline_diff(f,mod_xhm_phi)
+        # # mod_xhm_dphi -= min( mod_xhm_dphi[ (f>0.03*ll/2)&(f<0.12*ll/2) ] )
 
         # XAS/XHM
-        xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, [(ll,mm)], m1, m2, chi1_vec, chi2_vec, option_shorthand='4-xhm' )
+        xhm_dict = xcp.get_phenomxphm_coprecessing_multipoles( f, [(ll,mm)], m1, m2, chi1_vec, chi2_vec, option_shorthand='5-xhm-tuning' )
         xhm = xhm_dict[ll,mm]
         xhm_amp = abs(xhm)
         xhm_phi = unwrap( angle(xhm) )
@@ -167,7 +167,7 @@ for ll,mm in gc.lmlist:
         sca(ax[p]); p+=1
         plot( f, dphi_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
         plot( f, xhm_dphi, label='PhenomXHM', ls=':',lw=2,alpha=0.85,color='k' )
-        plot( f, mod_xhm_dphi, label='PhenomXPHM(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
+        # plot( f, mod_xhm_dphi, label='PhenomXPHM(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
         plot( f, xphm_dphi, label='PhenomXPHM', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
         
         # xscale('log')
@@ -175,7 +175,7 @@ for ll,mm in gc.lmlist:
         xlim( max(f)*0.7,max(f) )
         
         # ylim( limy(f, mod_xhm_dphi,dilate=0.1) )
-        yl = lim(list(limy(f,dphi_fd,dilate=0.1)) + list(limy(f,xhm_dphi,dilate=0.1)) + list(limy(f,mod_xhm_dphi,dilate=0.1)) + list(limy(f,xphm_dphi,dilate=0.1)))
+        yl = lim(list(limy(f,dphi_fd,dilate=0.1)) + list(limy(f,xhm_dphi,dilate=0.1)) + list(limy(f,xhm_dphi,dilate=0.1)) + list(limy(f,xphm_dphi,dilate=0.1)))
         ylim( yl )
         
         title(simname,size=12,loc='left')
@@ -192,7 +192,7 @@ for ll,mm in gc.lmlist:
         sca(ax[p]); p+=1
         plot( f, amp_fd, label='Calibration Data (NR)', lw=2, alpha=1, color='k' )
         plot( f, xhm_amp, label='PhenomXHM', ls=':',lw=2,alpha=0.85,color='k' )
-        plot( f, mod_xhm_amp, label='PhenomXPHM(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
+        # plot( f, mod_xhm_amp, label='PhenomXPHM(501:EZH-EffRD)', ls='--',lw=2,alpha=0.85,color='r' )
         plot( f, xphm_amp, label='PhenomXPHM', ls='--',lw=4,alpha=0.25,color='k',zorder=-10 )
         yscale('log')
         xscale('log')

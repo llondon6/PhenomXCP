@@ -139,7 +139,7 @@ for ll,mm in gc.lmlist:
         chi2_vec = array([chi2_x,chi2_y,chi2_z])
         
         #
-        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm), option_shorthand='4-xhm',include_nu0=True,floor_dphi=False)
+        action_helper = template_amp_phase(m1, m2, chi1_vec, chi2_vec,lm=(ll,mm), option_shorthand='5-xhm-tuning',include_nu0=True,floor_dphi=False)
         mod_xhm0_amp,mod_xhm0_dphi = action_helper(f)
         
         #
