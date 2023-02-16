@@ -101,7 +101,7 @@ def get_xphm_coprec(ell, emm, Mtotal, q, chi1, chi2, pnr=False):
     return freqs, hlmpos.data.data, hlmneg.data.data
 
 #
-def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=0, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0,__set_XPHMThresholdMband__=True, option_shorthand=None, output_phase_from_lal = False ):
+def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef=0, pflag=0, fsflag=None, mu1=0, mu2=0, mu3=0, mu4=0, nu0=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0,__set_XPHMThresholdMband__=True, option_shorthand=None, output_phase_from_lal = False, force_xhm_phase_alignment=False ):
     '''
     Generate dictionary of waveform arrays corresponding to input multipole list (i.e. list of [l,m] pairs ). If a single l,m pair is provided, then a single waveform array will be returned (i.e. we have opted to not have a lower-level function called "phenomxhm_multipole").
     
@@ -258,6 +258,10 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
 
         # Tell the model to return the coprecessing mode -- only works on our development branches
         lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, 1)
+
+        # Turn on dev toggle for forcing inspiral alignment of phase and phase derivative with XHM
+        if force_xhm_phase_alignment:
+            lalsim.SimInspiralWaveformParamsInsertPhenomXPNRForceXHMAlignment( lalparams, 1)
         
         #
         
