@@ -94,8 +94,10 @@ for ll,mm in gc.lmlist:
         #
         maxdeg_list = [u_order,mass_ratio_quantity_order,0,a1_order]
         temper = not True
+        
         # if key in ('nu4'): # if key in ('nu4','mu4'):
         #     maxdeg_list = [u_order,0,mass_ratio_quantity_order,a1_order]
+        
         # if key in ('mu3'):
         #     maxdeg_list = [3,mass_ratio_quantity_order,0,a1_order]
         
@@ -114,7 +116,7 @@ for ll,mm in gc.lmlist:
         #     # error('debugging')
         # # ---------------------------------------------------------- #
         
-        foo[key] = gmvpfit( model_domain, model_range[key],fitatol=0.0001,verbose=True,maxdeg_list=maxdeg_list,center=True,estatol=0.001,labels=labels,temper=temper)
+        foo[key] = gmvpfit( model_domain, model_range[key],fitatol=0.0001,verbose=True,maxdeg_list=maxdeg_list,center=True,estatol=0.0001,labels=labels,temper=temper)
         alert( 'The fit for %s has '%bold(yellow(key))+bold(yellow(str(len(foo[key].basis_symbols))))+' terms.', header=True )
 
     # # nu4
