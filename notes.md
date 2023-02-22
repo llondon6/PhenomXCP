@@ -1,12 +1,29 @@
+# Update Feb. ~21th 2023
 
-# Update Feb. 2023
+* Phase (and phase derivative) alignment with XHM during inspiral has been implemented, and the implementation has passed all preliminary tests.
+
+* Now, we should reconsider the relative time shifts at merger.
+
+* The tasks are likely as follows:
+
+- [x] Turn off all previous relative phase behavior within LAL, and make sure that python fitting routines have phase alignment on.
+- [x] Identify the correct merger-ringdown time shift parameter within PhenomXAS. 
+  * **The quantity of interest is `pPhase->c0`**.
+  * The use of `NU0` in the 22_TimeShift function has been disabled.
+  * Instead, we have now added the `NU0` deviation to `c0` in `LALSimIMRPhenomX_internals.c`.
+  * This is now consistent with how the the timeshift during merger-ringdown is added to XHM multipoles.
+- [ ] Develope a strategy for correctly fitting the merger ringdown time shift for (2,2) and (3,3). Perhaps the simplest but approx. thing to do is to for phase-derivative alignment at the beginning of the fitting region?
+- [ ] Return the relative phase parameters for (2,2) and (3,3).
+- [ ] Rerun sanity checks.
+
+# Update Feb. ~12th 2023
 
 **1.** Cecilio has confirmed that the low frequency relative phases of `XPHM` differ from those of `XHM`. He suggested that a time-shift alignment parameter be lowered --  **I tried this, but it did not work.** 
 
 **2.** ***Questions***:
 - [x] Does my comparison of low frequency behavior depend incorrectly on in-plane spin (somehow)? **Would be nice to clarify, but ultimately a moot point. See below.**
 - [x] Is it viable to **force** a phase and time-shift of PNR-XCP such that the PhenomXHM low frequency phase behavior is recovered?  **Others agree. Try it.**
-- [ ] Is it necessary and viable to restructure XCP so that the problematic dependence on the ringdown frequency is avoided. I suspect that this would still require a post-fact alignment step since the phase's morphology changes amid heuristic alignment frequencies.  **If forcing alignment with XHM works, then no.**
+- [x] Is it necessary and viable to restructure XCP so that the problematic dependence on the ringdown frequency is avoided. I suspect that this would still require a post-fact alignment step since the phase's morphology changes amid heuristic alignment frequencies.  **If forcing alignment with XHM works, then no.**
 
 **3.** ***Thoughts on forcing alignment with the `XHM` phase & phase derivative***:
 * This would ostensibly require computing the `XHM` phase and phase derivative at some reference frequency. 
@@ -29,12 +46,12 @@ f_inpiral_align = 0.001;
   
 **5.** ***Implementation Action Items***
 
-- [ ] Review and make short notes on how final `XHM` phase quantities are computed: ***Which structs are needed? Which functions?***
+- [x] Review and make short notes on how final `XHM` phase quantities are computed: ***Which structs are needed? Which functions?***
   * Can `SimIMRPhenomXHMPhase` be used to get the absolute (*i.e.* not relative) value of the phase?  Perhaps not, and instead something like `XLALSimIMRPhenomXHMFrequencySequenceOneMode` is needed?
   * Is there an equivalent function for the phase derivative?
-- [ ] Add fields to `XHM` and `XAS` structs the are inputs / data-holders for forced phase alignment.
+- [x] Add fields to `XHM` and `XAS` structs the are inputs / data-holders for forced phase alignment.
   * Define a phase alignment frequency: `f_inpiral_align`
-- [ ] Generate `XHM` $(2,2)$ and HM structs upon initialization of `XCP` structs. Do this separately for $(2,2)$ and HM.
+- [x] Generate `XHM` $(2,2)$ and HM structs upon initialization of `XCP` structs. Do this separately for $(2,2)$ and HM.
 
 **6.** ***Useful Notes / Other Action Items***
 
@@ -46,11 +63,11 @@ pWFHM->phiref22 = -1./pWF22->eta*IMRPhenomX_Phase_22(pWF22->MfRef,
  - pWFHM->phaseshift + 2.0*pWF22->phi0 + LAL_PI_4;
 ```
 Here, note that `pWFHM->phiref22` is the $(2,2)$ moment's phase at the reference frequency `pWF22->MfRef`. I should be able to use the same logic to set an absolute value of the `XCP` phase at some low frequency.
-- [ ] For $(2,2)$, reconstruct the absolute value of the $(2,2)$ phase in the same way that `pWFHM->phiref22` is computed. Zero the `XCP` phase at some low reference frequency, and then add the $(2,2)$ phase from `XAS`.
+- [x] For $(2,2)$, reconstruct the absolute value of the $(2,2)$ phase in the same way that `pWFHM->phiref22` is computed. Zero the `XCP` phase at some low reference frequency, and then add the $(2,2)$ phase from `XAS`.
 * Assuming that works, what should one do for the higher moments?
   * **Note** that `IMRPhenomXHM_Phase_noModeMixing` takes float input, so by construction it may be called at a single frequency point. So it is fit for purpose.
   * When `IMRPhenomXHM_Phase_noModeMixing` is called in `IMRPhenomXHMGenerateFDOneMode`, a factor of $(-1)^\ell$ is applied to the amplitude. This has the effect of adding $\ell \,\pi$ to the phase. The same is effecgtively done in `IMRPhenomXHM_MultiMode2`. So the factor should be added when `XCP` is aligned with `XHM`.
-- [ ] Don't forget to add $\ell \pi$ to the overall phase of the `XHM` moment when forcing `XCP` to have its value.
+- [x] Don't forget to add $\ell \pi$ to the overall phase of the `XHM` moment when forcing `XCP` to have its value.
 * Are there any other modifications made to the `XHM` phases that must be taken into account? **The answer appears to be NO up to how the moments are added in `IMRPhenomXHMFDAddMode`**.
 * Ok. Now what about the phase derivative??
 * According to `IMRPhenomXHM_Phase_noModeMixing` the phase derivative during inspiral should be
@@ -58,11 +75,11 @@ Here, note that `pWFHM->phiref22` is the $(2,2)$ moment's phase at the reference
 DPhiIns + pPhase->C1INSP 
 ``` 
 where `DPhiIns` is an evaluation of `IMRPhenomXHM_Inspiral_Phase_Ansatz`
-- [ ] Given the points above, show that you can set the `XCP` phase and phase derivative to zero at a chosen alignment frequency. Plot for $(2,2)$ and $(3,3)$ **(Fig. 1)**. This and following figures have 4 panels.
-- [ ] Add `XHM` to the plot **(Fig. 2)**.
-- [ ] Add `XHM` to the plot **(Fig. 3)**.
-- [ ] Align `XCP` with `XHM` **(Fig. 4)**.
-- [ ] Convince yourself that you are done.
+- [x] Given the points above, show that you can set the `XCP` phase and phase derivative to zero at a chosen alignment frequency. Plot for $(2,2)$ and $(3,3)$ **(Fig. 1)**. This and following figures have 4 panels.
+- [x] Add `XHM` to the plot **(Fig. 2)**.
+- [x] Add `XHM` to the plot **(Fig. 3)**.
+- [x] Align `XCP` with `XHM` **(Fig. 4)**.
+- [x] Convince yourself that you are done.
 
 # Summary of my annoyances with the PhenomXHM phase
 

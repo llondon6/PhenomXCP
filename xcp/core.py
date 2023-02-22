@@ -189,6 +189,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
             # Enforce that the final spin is the non-precessing version
             UseTunedCoprec = 0
             UseInputCoprecDeviations = 1
+            force_xhm_phase_alignment = 1
             
         else:
             

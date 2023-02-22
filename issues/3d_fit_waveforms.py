@@ -134,13 +134,17 @@ for ll,mm in gc.lmlist:
         
         # GENERATE TEMPLATE FUNCTIONS
         # ---
-        def action( p, verbose=False, output_vars=False, modeling_phase = 1 ):
+        def action( p, verbose=False, output_vars=False, modeling_phase = 1, amp_only=False ):
             
             #
             amplitude,phase_derivative = action_helper_1( f, *p ) if modeling_phase==1 else action_helper_3( f, *p )
             
             #
             calibration_dphi = dphi_fd_floored if modeling_phase==1 else dphi_fd
+            
+            #
+            calibration_dphi -= calibration_dphi[0]
+            phase_derivative -= phase_derivative[0]
             
             # -- Calculate residual of phase derivative -- #
             # phase_derivative -= min(phase_derivative)
@@ -153,7 +157,12 @@ for ll,mm in gc.lmlist:
             log_scaled_amplitude = log( amplitude * amp_scale )
             residual_amplitude = sum((log_scaled_amp_fd - log_scaled_amplitude)**2) / std(log_scaled_amp_fd)
             # -- Combine residuals ----------------------- #
-            combined_residual = residual_phase_derivative + residual_amplitude
+            '''
+            I am very happy to NOTE that multiplying the amplitude residual by 100 has the
+            effect of forcing the fit to always prioritize the amplitude fit, to the great
+            effect of overcoming the sometimes troublesome data quality issues in the phase derivative.
+            '''
+            combined_residual = (1-amp_only)*residual_phase_derivative + 100*residual_amplitude
             
             #
             if output_vars:
@@ -220,24 +229,24 @@ for ll,mm in gc.lmlist:
         
         #
         sca(ax[p]); p+=1
-        plot( f, dphi_fd, label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
+        plot( f, dphi_fd-dphi_fd[0], label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
         
-        plot( f, xphm_dphi, label='PhenomXPHM', ls=':', lw=1, alpha=0.85, color='tab:blue', zorder=-10 )
+        plot( f, xphm_dphi-xphm_dphi[0], label='PhenomXPHM', ls=':', lw=1, alpha=0.85, color='tab:blue', zorder=-10 )
         
-        plot( f, xhm_dphi, label='PhenomXHM', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
+        plot( f, xhm_dphi-xhm_dphi[0], label='PhenomXHM', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
         
-        plot( f, best_fit_dphi, label='Best Fit', color='r', ls='-' )
+        plot( f, best_fit_dphi-best_fit_dphi[0], label='Best Fit', color='r', ls='-' )
         xscale('log')
         xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
-        ylim( limy(f, dphi_fd,dilate=0.1) )
+        ylim( limy(f, dphi_fd-dphi_fd[0],dilate=0.1) )
         title(simname,size=12,loc='left')
         legend(ncol=2,loc=1)
         ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{%i%i})$'%(ll,mm))
         xlabel('$fM$')
         title(simname,loc='left',size=12)
         
-        axhline(0,ls=':',color='k')
-        axhline(min_xphm_dphi_l2m2,ls='--',color='green')
+        axhline(0-dphi_fd[0],ls=':',color='k')
+        axhline(min_xphm_dphi_l2m2-dphi_fd[0],ls='--',color='green')
         
         #
         sca(ax[p]); p+=1
