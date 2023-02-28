@@ -221,7 +221,7 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
     #     error('Precession version flag, or "pflag", must be input. To return PhenomX with default settings, please use pflag=0. To return PhenomXCP please use pflag=500.')
     
     #
-    Mtot = 100.0
+    Mtot = 80.16375200124948
     M1 = m1 * Mtot/ ( m1 + m2 )
     M2 = m2 * Mtot / ( m1 + m2 )
     

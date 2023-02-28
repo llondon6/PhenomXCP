@@ -82,8 +82,8 @@ for ll,mm in gc.lmlist:
         
         if mod(mm,2) == 0:
             #
-            u_order = 3
-            a1_order = 2
+            u_order = 4#3
+            a1_order = 3#2
             mass_ratio_quantity_order = 3
         else:
             #

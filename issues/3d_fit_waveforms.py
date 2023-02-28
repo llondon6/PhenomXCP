@@ -162,7 +162,7 @@ for ll,mm in gc.lmlist:
             effect of forcing the fit to always prioritize the amplitude fit, to the great
             effect of overcoming the sometimes troublesome data quality issues in the phase derivative.
             '''
-            combined_residual = (1-amp_only)*residual_phase_derivative + 100*residual_amplitude
+            combined_residual = (1-amp_only)*residual_phase_derivative + 200*residual_amplitude
             
             #
             if output_vars:
