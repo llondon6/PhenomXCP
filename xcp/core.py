@@ -260,9 +260,9 @@ def get_phenomxphm_coprecessing_multipoles(freqs, lmlist, m1, m2, s1, s2, phiRef
         # Tell the model to return the coprecessing mode -- only works on our development branches
         lalsim.SimInspiralWaveformParamsInsertPhenomXReturnCoPrec(lalparams, 1)
 
-        # Turn on dev toggle for forcing inspiral alignment of phase and phase derivative with XHM
-        if force_xhm_phase_alignment:
-            lalsim.SimInspiralWaveformParamsInsertPhenomXPNRForceXHMAlignment( lalparams, 1)
+        # # Turn on dev toggle for forcing inspiral alignment of phase and phase derivative with XHM
+        # if force_xhm_phase_alignment:
+        #     lalsim.SimInspiralWaveformParamsInsertPhenomXPNRForceXHMAlignment( lalparams, 1)
         
         #
         
@@ -364,7 +364,6 @@ def template_amp_phase(m1, m2, chi1_vec, chi2_vec, lm=(2,2),include_nu0=False,fl
     def template_together_helper( f, mu1=0, mu2=0, mu3=0, mu4=0, nu4=0, nu5=0, nu6=0, zeta1=0, zeta2=0, nu0=0 ):
         
         # Calculate PhenomXPHM with the input deviations
-        # NOTE that pflag=0 means that we use the default setting of PhenomXPHM as a reference model. NOTE that we try and except here becuase sometimes the optimization routines can stray outside of the accepted model domain thus causing LAL to throw an error
         
         # alert(nu0)
         if isinstance(nu0,(list,tuple,ndarray)):

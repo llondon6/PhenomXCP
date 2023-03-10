@@ -77,8 +77,8 @@ for ll,mm in gc.lmlist:
     # files = [ f for f in files if 'q8a08t60' in f ]
 
     # Get number of parameters to be tuned
-    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm))
-    var_count = scarecrow.__code__.co_argcount - 1
+    scarecrow = template_amp_phase(0.5, 0.5,zeros(3),zeros(3),lm=(ll,mm),include_nu0=True)
+    var_count = scarecrow.__code__.co_argcount
 
     #
     fig,ax = subplots( len(files), 2, figsize=3*array([ 2.5*2/(0.618), 2.0*len(files) ]) )
@@ -95,7 +95,7 @@ for ll,mm in gc.lmlist:
 
     #
     p = 0
-    popt_array  = zeros( (len(files),var_count+1) ) # NOTE that the "+1" is for nu0; see code below
+    popt_array  = zeros( (len(files),var_count-1) ) 
     fit_obj_list = []
     physical_param_array = zeros( (len(files), 19) )
     alert('Plotting ...')
@@ -137,14 +137,15 @@ for ll,mm in gc.lmlist:
         def action( p, verbose=False, output_vars=False, modeling_phase = 1, amp_only=False ):
             
             #
-            amplitude,phase_derivative = action_helper_1( f, *p ) if modeling_phase==1 else action_helper_3( f, *p )
+            amplitude,phase_derivative = action_helper_3( f, *p ) #if modeling_phase==1 else action_helper_3( f, *p )
             
             #
-            calibration_dphi = dphi_fd_floored if modeling_phase==1 else dphi_fd
+            # calibration_dphi = dphi_fd_floored if modeling_phase==1 else dphi_fd
+            calibration_dphi = dphi_fd
             
-            #
-            calibration_dphi -= calibration_dphi[0]
-            phase_derivative -= phase_derivative[0]
+            # #
+            # calibration_dphi -= calibration_dphi[0]
+            # phase_derivative -= phase_derivative[0]
             
             # -- Calculate residual of phase derivative -- #
             # phase_derivative -= min(phase_derivative)
@@ -175,12 +176,12 @@ for ll,mm in gc.lmlist:
         # Perform fit -- PHASE 1: Do not include dphi offset parameter nu0
         # # NOTE that carrying forward previous solutions as initial guesses causes problems UNLESS the simulations are distance sorted as can be seen above
         # --- parameters for dphi shape and amp, not dphi shift
-        guess_1 = zeros(var_count) #if j==0 else foo[1]
+        guess_1 = zeros(var_count-1) #if j==0 else foo[1]
         foo_shape = minimize( lambda p: action(p,modeling_phase=1), guess_1 )
         foo_shape = (foo_shape.fun,foo_shape.x)
         
         #
-        best_shape_popt = list(foo_shape[1]) + [0]
+        best_shape_popt = list(foo_shape[1]) #+ [0]
         best_shape_fit_amp,best_shape_fit_dphi = action_helper_3( f, *best_shape_popt )
         
         #
@@ -197,10 +198,11 @@ for ll,mm in gc.lmlist:
         # guess_2 = nu0_opt_guess #if j==0 else foo[1]
         # foo_shift = minimize( lambda p: action(list(guess_1) + [ p ],modeling_phase=2), guess_2 )
         # foo_shift = (foo_shift.fun,foo_shift.x)
+        
         #
         foo = list(foo_shape)
-        nu0_opt = nu0_opt_guess # foo_shift[1][0]
-        foo[1] = list(foo_shape[1]) + list([nu0_opt])
+        # nu0_opt = nu0_opt_guess # foo_shift[1][0]
+        # foo[1] = list(foo_shape[1]) + list([nu0_opt])
         
         
         # foos, boundary_par = jac_sort_minimize(action,var_count, verbose=True, initial_guess=guess)
@@ -216,7 +218,7 @@ for ll,mm in gc.lmlist:
         # Store fit params and cov 
         alert(simname,header=True)
         # print('~> ',theta,delta,a1)
-        print('>> ',simname,nu0_opt,nu0_opt_guess)
+        # print('>> ',simname,nu0_opt,nu0_opt_guess)
         alert(foo[1],header=False)
         popt_array[j,:] = foo[1]
         fit_obj_list.append( foo )
@@ -229,24 +231,32 @@ for ll,mm in gc.lmlist:
         
         #
         sca(ax[p]); p+=1
-        plot( f, dphi_fd-dphi_fd[0], label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
+        # plot( f, dphi_fd-dphi_fd[0], label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
+        plot( f, dphi_fd, label='Calibration Data (NR)', lw=4,ls='-', alpha=0.15, color='k' )
         
-        plot( f, xphm_dphi-xphm_dphi[0], label='PhenomXPHM', ls=':', lw=1, alpha=0.85, color='tab:blue', zorder=-10 )
+        # plot( f, xphm_dphi-xphm_dphi[0], label='PhenomXPHM', ls=':', lw=1, alpha=0.85, color='tab:blue', zorder=-10 )
+        plot( f, xphm_dphi, label='PhenomXPHM', ls=':', lw=1, alpha=0.85, color='tab:blue', zorder=-10 )
         
-        plot( f, xhm_dphi-xhm_dphi[0], label='PhenomXHM', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
+        # plot( f, xhm_dphi-xhm_dphi[0], label='PhenomXHM', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
+        plot( f, xhm_dphi, label='PhenomXHM', ls='--',lw=1,alpha=0.85,color='k',zorder=-10 )
         
-        plot( f, best_fit_dphi-best_fit_dphi[0], label='Best Fit', color='r', ls='-' )
+        # plot( f, best_fit_dphi-best_fit_dphi[0], label='Best Fit', color='r', ls='-' )
+        plot( f, best_fit_dphi, label='Best Fit', color='r', ls='-' )
         xscale('log')
         xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
-        ylim( limy(f, dphi_fd-dphi_fd[0],dilate=0.1) )
+        # ylim( limy(f, dphi_fd-dphi_fd[0],dilate=0.1) )
+        ylim( limy(f, dphi_fd,dilate=0.1) )
         title(simname,size=12,loc='left')
         legend(ncol=2,loc=1)
         ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{%i%i})$'%(ll,mm))
         xlabel('$fM$')
         title(simname,loc='left',size=12)
         
-        axhline(0-dphi_fd[0],ls=':',color='k')
-        axhline(min_xphm_dphi_l2m2-dphi_fd[0],ls='--',color='green')
+        # axhline(0-dphi_fd[0],ls=':',color='k')
+        # axhline(min_xphm_dphi_l2m2-dphi_fd[0],ls='--',color='green')
+        
+        axhline(0,ls=':',color='k')
+        axhline(min_xphm_dphi_l2m2,ls='--',color='green')
         
         #
         sca(ax[p]); p+=1

@@ -184,15 +184,15 @@ for ll,mm in gc.lmlist:
 
         #
         sca(ax[p]); p+=1
-        plot( f, dphi_fd-dphi_fd[0], label='Calibration Data (NR)', lw=4, alpha=0.2, color='k' )
-        plot( f, opt_dphi-opt_dphi[0], label='Direct Fit', ls='--',lw=2,alpha=1,color='dodgerblue' )
-        plot( f, tuned_xhm_dphi-tuned_xhm_dphi[0], label='End Model (PNR)', ls='-',lw=2,alpha=1,color='r' )
-        plot( f, py_dphi-py_dphi[0], label='End Model (PNR-py)', ls=':',lw=2,alpha=1,color='tab:orange' )
-        plot( f, mod_xhm_dphi-mod_xhm_dphi[0], label='PhenomXPHM', ls='-',lw=2,alpha=0.85,color='m' )
-        plot( f, mod_xhm0_dphi-mod_xhm0_dphi[0], label='PhenomXHM', ls='--',lw=1,alpha=1,color='k',zorder=-10 )
+        plot( f, dphi_fd, label='Calibration Data (NR)', lw=4, alpha=0.2, color='k' )
+        plot( f, opt_dphi, label='Direct Fit', ls='--',lw=2,alpha=1,color='dodgerblue' )
+        plot( f, tuned_xhm_dphi, label='End Model (PNR)', ls='-',lw=2,alpha=1,color='r' )
+        plot( f, py_dphi, label='End Model (PNR-py)', ls=':',lw=2,alpha=1,color='tab:orange' )
+        plot( f, mod_xhm_dphi, label='PhenomXPHM', ls='-',lw=2,alpha=0.85,color='m' )
+        plot( f, mod_xhm0_dphi, label='PhenomXHM', ls='--',lw=1,alpha=1,color='k',zorder=-10 )
         xscale('log')
         xlim(lim(f,dilate=1.1,dilate_with_multiply=True))
-        ylim( limy(f, py_dphi-py_dphi[0],dilate=0.1) )
+        ylim( limy(f, py_dphi,dilate=0.1) )
         title(simname,size=12,loc='left')
         legend(ncol=2,loc=1)
         ylabel(r'$\frac{d}{df}\arg(\tilde{h}_{%i%i})$'%(ll,mm))

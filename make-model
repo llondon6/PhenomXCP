@@ -27,7 +27,7 @@ basedir=/Users/book/KOALA/PhenomXCP/issues
 
 # Fit model parameters across physical parameter space and then document
 # --
-# $basedir/4a_fit_hyper_parameters.py
+$basedir/4a_fit_hyper_parameters.py
 $basedir/4c_convert_fits_to_code.py
 
 # Make backup of relevant LALSimulation files 
@@ -45,7 +45,7 @@ cd $refdir
 # Generate late stage diagnostic plots
 # --
 $basedir/5a_plot_postfit_diagnostic.py
-# $basedir/4b_make_fit_diagnostic_plots.py
+$basedir/4b_make_fit_diagnostic_plots.py
 # $basedir/5b_plot_extrapolation_a1_diagnostic.py
 # $basedir/5c_plot_extrapolation_q_diagnostic.py
 # $basedir/5d_plot_extrapolation_theta_diagnostic.py
