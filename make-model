@@ -23,12 +23,12 @@ basedir=/Users/book/KOALA/PhenomXCP/issues
 # Fit waveforms and organize metadata
 # --
 # $basedir/3c_plot_prefit_diagnostic.py
-# $basedir/3d_fit_waveforms.py
+$basedir/3d_fit_waveforms.py
 
 # Fit model parameters across physical parameter space and then document
 # --
-# $basedir/4a_fit_hyper_parameters.py
-# $basedir/4c_convert_fits_to_code.py
+$basedir/4a_fit_hyper_parameters.py
+$basedir/4c_convert_fits_to_code.py
 
 # Make backup of relevant LALSimulation files 
 cp "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c" "/Users/book/opt/anaconda2/envs/hack-phenomx3/src/lalsuite/lalsimulation/lib/LALSimIMRPhenomX_PNR_deviations.c_backup"

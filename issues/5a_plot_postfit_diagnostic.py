@@ -147,7 +147,9 @@ for ll,mm in gc.lmlist:
         opt_amp,opt_dphi = action_helper(f,*popt)
         
         #
-        (mu1_l2m2,mu2_l2m2,mu3_l2m2,nu4_l2m2,nu5_l2m2,nu6_l2m2,zeta1_l2m2,zeta2_l2m2,nu0_l2m2,mu1_l3m3,mu2_l3m3,mu3_l3m3,mu4_l3m3,nu4_l3m3,nu5_l3m3,nu6_l3m3,zeta1_l3m3,zeta2_l3m3,nu0_l3m3) = generate_model_params(theta,eta,a1)
+        (mu1_l2m2,mu2_l2m2,mu3_l2m2,nu4_l2m2,nu5_l2m2,nu6_l2m2,zeta1_l2m2,zeta2_l2m2,nu0_l2m2) = generate_model_params(theta,eta,a1)
+        #
+        # (mu1_l2m2,mu2_l2m2,mu3_l2m2,nu4_l2m2,nu5_l2m2,nu6_l2m2,zeta1_l2m2,zeta2_l2m2,nu0_l2m2,mu1_l3m3,mu2_l3m3,mu3_l3m3,mu4_l3m3,nu4_l3m3,nu5_l3m3,nu6_l3m3,zeta1_l3m3,zeta2_l3m3,nu0_l3m3) = generate_model_params(theta,eta,a1)
         if ll == 2:
             ppy = (mu1_l2m2,mu2_l2m2,mu3_l2m2,nu4_l2m2,nu5_l2m2,nu6_l2m2,zeta1_l2m2,zeta2_l2m2,nu0_l2m2)
         else:
